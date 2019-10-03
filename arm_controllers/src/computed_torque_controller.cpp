@@ -11,7 +11,7 @@
 #include <kdl/tree.hpp>
 #include <kdl/kdl.hpp>
 #include <kdl/chain.hpp>
-#include <kdl_parser/kdl_parser.hpp>
+#include <kdl_parser/kdl_parser.hpp>          // get kdl tree from urdf
 #include <kdl/chaindynparam.hpp>              // inverse dynamics
 
 #include <boost/scoped_ptr.hpp>
@@ -264,10 +264,14 @@ class Computed_Torque_Controller : public controller_interface::Controller<hardw
         id_solver_->JntToGravity(q_, G_); 
 
         // *** 2.3 Apply Torque Command to Actuator ***
+        // ISHIRA: Stabilizing Linear Control
         aux_d_.data = M_.data * (qd_ddot_.data + Kp_.data.cwiseProduct(e_.data) + Kd_.data.cwiseProduct(e_dot_.data));
+        // ISHIRA: n(q, qdot)
         comp_d_.data = C_.data + G_.data;
+        // ISHIRA: Nonlinear Compensation and Decoupling
         tau_d_.data = aux_d_.data + comp_d_.data;
 
+        // ISHIRA: Manipulation
         for (int i = 0; i < n_joints_; i++)
         {
             joints_[i].setCommand(tau_d_(i));
