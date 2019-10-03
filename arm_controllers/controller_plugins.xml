@@ -35,5 +35,12 @@
       Passivity Based Controller
     </description>
   </class>
+
+  <class name="arm_controllers/Velocity_Controller" type="arm_controllers::Velocity_Controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Velocity Based Controller
+    </description>
+  </class>
+
 </library>
 
