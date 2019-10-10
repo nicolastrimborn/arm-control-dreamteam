@@ -1,2 +1,6 @@
 # Ignore all idea
 .idea/*
+
+#Debug 
+arm_controllers/cmake-build-debug/
+
