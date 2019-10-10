@@ -31,4 +31,7 @@ This class encapsulates a tree kinematic interconnection structure. It is build 
 This class encapsulates a serial kinematic interconnection structure. It is build out of segments.
 
 ## URDF package 
-Contains a C++ parser for the Unified Robot Description Format (URDF), which is an XML format for representing a robot model. 
+Contains a C++ parser for the Unified Robot Description Format (URDF), which is an XML format for representing a robot model.
+
+## Reza Notes
+The Jacobian Calculation is not in the correct place. Correct it when moving to task space control
