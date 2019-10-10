@@ -191,10 +191,12 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
 
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
-
+        qddot_.data =  Eigen::VectorXd::Zero(n_joints_);
         e_.data = Eigen::VectorXd::Zero(n_joints_);
         e_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         e_int_.data = Eigen::VectorXd::Zero(n_joints_);
+
+        desired_.data = Eigen::VectorXd::Zero(n_joints_);
 
         // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
         M_.resize(kdl_chain_.getNrOfJoints());
@@ -210,7 +212,7 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
         pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
         // 6.2 subsriber
-
+        sub = n.subscribe("command", 1000, &Velocity_Controller::commandCB, this);
         return true;
     }
 
@@ -221,12 +223,19 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
             ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
             return;
         }
+        else
+        {
+            for (size_t i = 0; i < n_joints_; i++)
+            {
+                desired_(i) = msg->data[i]*KDL::deg2rad;
+            }
+        }
     }
 
     void starting(const ros::Time &time)
     {
         t = 0.0;
-        ROS_INFO("Starting Computed Torque Controller");
+        ROS_INFO("Starting Velocity Controller");
     }
 
     void update(const ros::Time &time, const ros::Duration &period)
@@ -241,31 +250,33 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
         {
             q_(i) = joints_[i].getPosition();
             qdot_(i) = joints_[i].getVelocity();
+            qddot_(i) = joints_[i].getEffort();
         }
-
         // ********* 1. Desired Trajecoty in Joint Space *********
-
         for (size_t i = 0; i < n_joints_; i++)
         {
-            qd_ddot_(i) = -M_PI * M_PI / 4 * 45 * KDL::deg2rad * sin(M_PI / 2 * t); 
-            qd_dot_(i) = M_PI / 2 * 45 * KDL::deg2rad * cos(M_PI / 2 * t);          
-            qd_(i) = 45 * KDL::deg2rad * sin(M_PI / 2* t);
+            qd_ddot_(i) = -desired_(i)* sin(t);
+            qd_dot_(i) = desired_(i)*cos(t);
+            qd_(i) = desired_(i)* sin(t);
         }
-
         // ********* 2. Motion Controller in Joint Space*********
         // *** 2.1 Error Definition in Joint Space ***
         e_.data = qd_.data - q_.data;
         e_dot_.data = qd_dot_.data - qdot_.data;
+        e_ddot_.data = qd_ddot_.data - qddot_.data;
         e_int_.data = qd_.data - q_.data; // (To do: e_int 업데이트 필요요)
 
         // *** 2.2 Compute model(M,C,G) ***
         id_solver_->JntToMass(q_, M_);
         id_solver_->JntToCoriolis(q_, qdot_, C_);
-        id_solver_->JntToGravity(q_, G_); 
+        id_solver_->JntToGravity(q_, G_);
 
         // *** 2.3 Apply Torque Command to Actuator ***
-        // PD control + gravity compensation
-        tau_d_.data = G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
+        // velocity control
+
+        aux_d_.data = M_.data * (qd_ddot_.data  + Kd_.data.cwiseProduct(e_dot_.data)) ;
+        comp_d_.data = C_.data.cwiseProduct(qdot_.data) + G_.data;
+        tau_d_.data = aux_d_.data + comp_d_.data;
 
         // ISHIRA: Manipulation
         for (int i = 0; i < n_joints_; i++)
@@ -453,8 +464,9 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
     // Joint Space State
     KDL::JntArray qd_, qd_dot_, qd_ddot_;
     KDL::JntArray qd_old_;
-    KDL::JntArray q_, qdot_;
-    KDL::JntArray e_, e_dot_, e_int_;
+    KDL::JntArray q_, qdot_, qddot_;
+    KDL::JntArray e_, e_dot_, e_ddot_, e_int_;
+    KDL::JntArray desired_;
 
     // Input
     KDL::JntArray aux_d_;
@@ -470,6 +482,9 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
     // ros publisher
     ros::Publisher pub_qd_, pub_q_, pub_e_;
     ros::Publisher pub_SaveData_;
+
+    // ros subscriber
+    ros::Subscriber sub;
 
     // ros message
     std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;
