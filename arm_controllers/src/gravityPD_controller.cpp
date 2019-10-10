@@ -16,7 +16,7 @@
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
-
+#include <std_msgs/String.h>
 #define PI 3.141592
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
@@ -208,9 +208,8 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         pub_e_ = n.advertise<std_msgs::Float64MultiArray>("e", 1000);
 
         pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
-
         // 6.2 subsriber
-
+        sub = n.subscribe("command", 1000, &GravityPD_Controller::commandCB, this);
         return true;
     }
 
@@ -221,12 +220,19 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
             ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
             return;
         }
+        else
+        {
+            for (size_t i = 0; i < n_joints_; i++)
+            {
+                qd_(i) = msg->data[i]*KDL::deg2rad;
+            }
+        }
     }
 
     void starting(const ros::Time &time)
     {
         t = 0.0;
-        ROS_INFO("Starting Computed Torque Controller");
+        ROS_INFO("Starting Gravity Compensation and PD Controller");
     }
 
     void update(const ros::Time &time, const ros::Duration &period)
@@ -244,34 +250,6 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         }
 
         // ********* 1. Desired Trajecoty in Joint Space *********
-
-        for (size_t i = 0; i < 2; i++)
-        {
-            // qd_ddot_(i) = -M_PI * M_PI / 4 * 45 * KDL::deg2rad * sin(M_PI / 2 * t); 
-            // qd_dot_(i) = M_PI / 2 * 45 * KDL::deg2rad * cos(M_PI / 2 * t);          
-            // qd_(i) = 45 * KDL::deg2rad * sin(M_PI / 2* t);
-            qd_ddot_(i) = 0.0;
-            qd_dot_(i) = 0.0;
-            qd_(i) = 0.0;
-        }
-
-            qd_ddot_(2) = 0.0;
-            qd_dot_(2) = 0.0;
-            qd_(2) = M_PI / 2;
-
-            qd_ddot_(3) = 0.0;
-            qd_dot_(3) = 0.0;
-            qd_(3) = M_PI * 3 / 4;
-
-        for (size_t i = 4; i < n_joints_; i++)
-        {
-            // qd_ddot_(i) = -M_PI * M_PI / 4 * 45 * KDL::deg2rad * sin(M_PI / 2 * t); 
-            // qd_dot_(i) = M_PI / 2 * 45 * KDL::deg2rad * cos(M_PI / 2 * t);          
-            // qd_(i) = 45 * KDL::deg2rad * sin(M_PI / 2* t);
-            qd_ddot_(i) = 0.0;
-            qd_dot_(i) = 0.0;
-            qd_(i) = 0.0;
-        }
 
         // ********* 2. Motion Controller in Joint Space*********
         // *** 2.1 Error Definition in Joint Space ***
@@ -491,6 +469,9 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
     // ros publisher
     ros::Publisher pub_qd_, pub_q_, pub_e_;
     ros::Publisher pub_SaveData_;
+
+    // ros subsciber
+    ros::Subscriber sub;
 
     // ros message
     std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;

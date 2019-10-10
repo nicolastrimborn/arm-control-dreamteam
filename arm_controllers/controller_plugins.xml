@@ -44,7 +44,7 @@
 
   <class name="arm_controllers/GravityPD_Controller" type="arm_controllers::GravityPD_Controller" base_class_type="controller_interface::ControllerBase">
     <description>
-      Velocity Based Controller
+      Gravity Compensation and PD Controller
     </description>
   </class>
 
