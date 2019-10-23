@@ -42,6 +42,12 @@
     </description>
   </class>
 
+  <class name="arm_controllers/Kinematic_Controller" type="arm_controllers::Kinematic_Controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Velocity Based Controller
+    </description>
+  </class>
+
   <class name="arm_controllers/GravityPD_Controller" type="arm_controllers::GravityPD_Controller" base_class_type="controller_interface::ControllerBase">
     <description>
       Gravity Compensation and PD Controller
@@ -49,4 +55,3 @@
   </class>
 
 </library>
-

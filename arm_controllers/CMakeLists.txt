@@ -43,6 +43,7 @@ add_library(${PROJECT_NAME}
   src/adaptive_variable_impedance_controller.cpp
   src/passivity_controller.cpp
   src/velocity_controller.cpp
+  src/kinematic_controller.cpp
   src/gravityPD_controller.cpp
 )
 
