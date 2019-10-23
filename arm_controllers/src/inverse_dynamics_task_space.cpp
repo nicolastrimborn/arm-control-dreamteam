@@ -210,6 +210,10 @@ class InverseDynamics_Controller : public controller_interface::Controller<hardw
         desired_.data = Eigen::VectorXd::Zero(n_joints_);
 
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
+        x_cmd_.data(0) = 0.0;
+        x_cmd_.data(1) = -0.32;
+        x_cmd_.data(2) = 0.56;
+
         for (size_t i = 0; i < num_taskspace; i++)
         {
            ex_(i) = 0;
@@ -308,7 +312,7 @@ class InverseDynamics_Controller : public controller_interface::Controller<hardw
         J_inv_ = J_.data.inverse();
 
         // *** 2.2 computing Jacobian derivative***
-        //Jdot_ = J_.data.derived();
+        Jdot_ = J_.data.derived();
 
         // ********* 3. Motion Controller in Joint Space*********
         // *** 3.1 Error Definition in Joint Space ***
@@ -324,7 +328,7 @@ class InverseDynamics_Controller : public controller_interface::Controller<hardw
 
         // *** 3.3 Apply Torque Command to Actuator ***
         // Feedback
-        sum_e = xd_ddot_ + Kd_.data.cwiseProduct(ex_dot_) + Kp_.data.cwiseProduct(ex_) - Jdot_*qdot_.data.transpose();
+        sum_e = xd_ddot_ + Kd_.data.cwiseProduct(ex_dot_) + Kp_.data.cwiseProduct(ex_) - Jdot_*qdot_.data;
 
         // velocity control
         aux_d_.data = M_.data * (J_inv_*sum_e) ;
