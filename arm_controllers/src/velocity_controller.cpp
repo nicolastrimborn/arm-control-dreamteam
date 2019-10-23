@@ -1,7 +1,7 @@
 // from ros-control meta packages
 #include <controller_interface/controller.h>
 #include <hardware_interface/joint_command_interface.h>
-
+#include <control_toolbox/pid.h>
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
 
@@ -29,6 +29,7 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
   public:
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n)
     {
+        loop_count_=0;
         // ********* 1. Get joint name / gain from the parameter server *********
         // 1.1 Joint Name
         if (!n.getParam("joints", joint_names_))
@@ -58,41 +59,41 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
 
-        std::vector<double> Kp(n_joints_), Ki(n_joints_), Kd(n_joints_);
-        for (size_t i = 0; i < n_joints_; i++)
-        {
-            std::string si = boost::lexical_cast<std::string>(i + 1);
-            if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/p", Kp[i]))
-            {
-                Kp_(i) = Kp[i];
-            }
-            else
-            {
-                std::cout << "/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/p" << std::endl;
-                ROS_ERROR("Cannot find pid/p gain");
-                return false;
-            }
+        // std::vector<double> Kp(n_joints_), Ki(n_joints_), Kd(n_joints_);
+        // for (size_t i = 0; i < n_joints_; i++)
+        // {
+        //     std::string si = boost::lexical_cast<std::string>(i + 1);
+        //     if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/p", Kp[i]))
+        //     {
+        //         Kp_(i) = Kp[i];
+        //     }
+        //     else
+        //     {
+        //         std::cout << "/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/p" << std::endl;
+        //         ROS_ERROR("Cannot find pid/p gain");
+        //         return false;
+        //     }
 
-            if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/i", Ki[i]))
-            {
-                Ki_(i) = Ki[i];
-            }
-            else
-            {
-                ROS_ERROR("Cannot find pid/i gain");
-                return false;
-            }
+        //     if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/i", Ki[i]))
+        //     {
+        //         Ki_(i) = Ki[i];
+        //     }
+        //     else
+        //     {
+        //         ROS_ERROR("Cannot find pid/i gain");
+        //         return false;
+        //     }
 
-            if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/d", Kd[i]))
-            {
-                Kd_(i) = Kd[i];
-            }
-            else
-            {
-                ROS_ERROR("Cannot find pid/d gain");
-                return false;
-            }
-        }
+        //     if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/d", Kd[i]))
+        //     {
+        //         Kd_(i) = Kd[i];
+        //     }
+        //     else
+        //     {
+        //         ROS_ERROR("Cannot find pid/d gain");
+        //         return false;
+        //     }
+        // }
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -203,6 +204,22 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
 
+        // PIDS////////////////////////////////////////////////////////////////
+
+        // pids
+        pids_.resize(n_joints_);
+        for (size_t i=0; i<n_joints_; i++)
+        {
+            // Load PID Controller using gains set on parameter server
+            if (!pids_[i].init(ros::NodeHandle(n, "gains/" + joint_names_[i] + "/pid")))
+            {
+                ROS_ERROR_STREAM("Failed to load PID parameters from " << joint_names_[i] + "/pid");
+                return false;
+            }
+        }
+
+        /////////////////////////////////////////////////////////////////////////
+
         // ********* 6. ROS 명령어 *********
         // 6.1 publisher
         pub_qd_ = n.advertise<std_msgs::Float64MultiArray>("qd", 1000);
@@ -271,25 +288,34 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
         id_solver_->JntToCoriolis(q_, qdot_, C_);
         id_solver_->JntToGravity(q_, G_);
 
+        for (int i = 0; i < n_joints_; i++)
+        {
+            Kp_(i) = pids_[i].getGains().p_gain_;
+            Kd_(i) = pids_[i].getGains().d_gain_;
+            Ki_(i) = pids_[i].getGains().i_gain_;
+        }
+
         // *** 2.3 Apply Torque Command to Actuator ***
         // velocity control
-
         aux_d_.data = M_.data * (qd_ddot_.data  + Kd_.data.cwiseProduct(e_dot_.data)) ;
         comp_d_.data = C_.data.cwiseProduct(qdot_.data) + G_.data;
         tau_d_.data = aux_d_.data + comp_d_.data;
-
+        
         // ISHIRA: Manipulation
         for (int i = 0; i < n_joints_; i++)
         {
             joints_[i].setCommand(tau_d_(i));
-            // joints_[i].setCommand(0.0);
         }
 
-        // ********* 3. data 저장 *********
-        save_data();
+        if (loop_count_ % 100 == 0)
+        {
+            // ********* 3. data 저장 *********
+            save_data();
 
-        // ********* 4. state 출력 *********
-        print_state();
+            // ********* 4. state 출력 *********
+            print_state();
+        }
+        loop_count_++;
     }
 
     void stopping(const ros::Time &time)
@@ -397,7 +423,7 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
     void print_state()
     {
         static int count = 0;
-        if (count > 99)
+        if (count > 9)
         {
             printf("*********************************************************\n\n");
             printf("*** Simulation Time (unit: sec)  ***\n");
@@ -441,6 +467,7 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
   private:
     // others
     double t;
+    int loop_count_;    
 
     //Joint handles
     unsigned int n_joints_;                               // joint 숫자
@@ -475,6 +502,7 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
 
     // gains
     KDL::JntArray Kp_, Ki_, Kd_;
+    std::vector<control_toolbox::Pid> pids_;       /**< Internal PID controllers. */
 
     // save the data
     double SaveData_[SaveDataMax];

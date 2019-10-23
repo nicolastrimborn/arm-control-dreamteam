@@ -3,4 +3,5 @@
 
 #Debug 
 arm_controllers/cmake-build-debug/
+.vscode
 

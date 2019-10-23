@@ -1,7 +1,7 @@
 // from ros-control meta packages
 #include <controller_interface/controller.h>
 #include <hardware_interface/joint_command_interface.h>
-#include <control_toolbox/pid.h>
+
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
 
@@ -13,23 +13,26 @@
 #include <kdl/chain.hpp>
 #include <kdl_parser/kdl_parser.hpp>          // get kdl tree from urdf
 #include <kdl/chaindynparam.hpp>              // inverse dynamics
+#include <kdl/chainjnttojacsolver.hpp>        // jacobian
+#include <kdl/chainfksolverpos_recursive.hpp> // forward kinematics
+// #include <kdl/chainfksolvervel_recursive.hpp> // forward kinematics
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
-#include <std_msgs/String.h>
+
 #define PI 3.141592
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
 #define SaveDataMax 49
+#define num_taskspace 6
 
 namespace arm_controllers
 {
-class GravityPD_Controller : public controller_interface::Controller<hardware_interface::EffortJointInterface>
+class InverseDynamics_Controller : public controller_interface::Controller<hardware_interface::EffortJointInterface>
 {
   public:
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n)
     {
-        loop_count_ = 0;
         // ********* 1. Get joint name / gain from the parameter server *********
         // 1.1 Joint Name
         if (!n.getParam("joints", joint_names_))
@@ -53,50 +56,47 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
             }
         }
 
-     
-        // // 1.2 Gain
-        // // 1.2.1 Joint Controller
+        // 1.2 Gain
+        // 1.2.1 Joint Controller
         Kp_.resize(n_joints_);
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
 
-        
-        // std::vector<double> Kp(n_joints_), Ki(n_joints_), Kd(n_joints_);
-        
-        // // for (size_t i = 0; i < n_joints_; i++)
-        // {
-        //     std::string si = boost::lexical_cast<std::string>(i + 1);
-        //     if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/p", Kp[i]))
-        //     {
-        //         Kp_(i) = Kp[i];
-        //     }
-        //     else
-        //     {
-        //         std::cout << "/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/p" << std::endl;
-        //         ROS_ERROR("Cannot find pid/p gain");
-        //         return false;
-        //     }
+        std::vector<double> Kp(n_joints_), Ki(n_joints_), Kd(n_joints_);
+        for (size_t i = 0; i < n_joints_; i++)
+        {
+            std::string si = boost::lexical_cast<std::string>(i + 1);
+            if (n.getParam("/elfin/inverse_dynamics_controller/gains/elfin_joint" + si + "/pid/p", Kp[i]))
+            {
+                Kp_(i) = Kp[i];
+            }
+            else
+            {
+                std::cout << "/elfin/inverse_dynamics_controller/gains/elfin_joint" + si + "/pid/p" << std::endl;
+                ROS_ERROR("Cannot find pid/p gain");
+                return false;
+            }
 
-        //     if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/i", Ki[i]))
-        //     {
-        //         Ki_(i) = Ki[i];
-        //     }
-        //     else
-        //     {
-        //         ROS_ERROR("Cannot find pid/i gain");
-        //         return false;
-        //     }
+            if (n.getParam("/elfin/inverse_dynamics_controller/gains/elfin_joint" + si + "/pid/i", Ki[i]))
+            {
+                Ki_(i) = Ki[i];
+            }
+            else
+            {
+                ROS_ERROR("Cannot find pid/i gain");
+                return false;
+            }
 
-        //     if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/d", Kd[i]))
-        //     {
-        //         Kd_(i) = Kd[i];
-        //     }
-        //     else
-        //     {
-        //         ROS_ERROR("Cannot find pid/d gain");
-        //         return false;
-        //     }
-        // }
+            if (n.getParam("/elfin/inverse_dynamics_controller/gains/elfin_joint" + si + "/pid/d", Kd[i]))
+            {
+                Kd_(i) = Kd[i];
+            }
+            else
+            {
+                ROS_ERROR("Cannot find pid/d gain");
+                return false;
+            }
+        }
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -183,6 +183,12 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
 
         id_solver_.reset(new KDL::ChainDynParam(kdl_chain_, gravity_));
 
+        // 4.4 jacobian solver 초기화
+        jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
+
+        // 4.5 forward kinematics solver 초기화
+        fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
+
         // ********* 5. 각종 변수 초기화 *********
 
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
@@ -195,35 +201,29 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
 
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
+        qddot_.data =  Eigen::VectorXd::Zero(n_joints_);
 
         e_.data = Eigen::VectorXd::Zero(n_joints_);
         e_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         e_int_.data = Eigen::VectorXd::Zero(n_joints_);
 
+        desired_.data = Eigen::VectorXd::Zero(n_joints_);
 
-         // PIDS////////////////////////////////////////////////////////////////
+        x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
+        x_cmd_.data(0) = 0.0;
+        x_cmd_.data(1) = -0.32;
+        x_cmd_.data(2) = 0.56;
 
-        // pids
-        pids_.resize(n_joints_);
-        for (size_t i=0; i<n_joints_; i++)
+        for (size_t i = 0; i < num_taskspace; i++)
         {
-            // Load PID Controller using gains set on parameter server
-            if (!pids_[i].init(ros::NodeHandle(n, "gains/" + joint_names_[i] + "/pid")))
-            {
-                ROS_ERROR_STREAM("Failed to load PID parameters from " << joint_names_[i] + "/pid");
-                return false;
-            }
+           ex_(i) = 0;
         }
 
-        /////////////////////////////////////////////////////////////////////////
-
-
-
         // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
+        J_.resize(kdl_chain_.getNrOfJoints());
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
-
 
         // ********* 6. ROS 명령어 *********
         // 6.1 publisher
@@ -231,24 +231,29 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
         pub_e_ = n.advertise<std_msgs::Float64MultiArray>("e", 1000);
 
+        pub_xd_ = n.advertise<std_msgs::Float64MultiArray>("xd", 1000);
+        pub_x_ = n.advertise<std_msgs::Float64MultiArray>("x", 1000);
+        pub_ex_ = n.advertise<std_msgs::Float64MultiArray>("ex", 1000);
+
         pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
+
         // 6.2 subsriber
-        sub = n.subscribe("command", 1000, &GravityPD_Controller::commandCB, this);
+        sub = n.subscribe("command", 1000, &InverseDynamics_Controller::commandCB, this);
         return true;
     }
 
     void commandCB(const std_msgs::Float64MultiArrayConstPtr &msg)
     {
-        if (msg->data.size() != n_joints_)
+        if (msg->data.size() != num_taskspace)
         {
             ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
             return;
         }
         else
         {
-            for (size_t i = 0; i < n_joints_; i++)
+            for (size_t i = 0; i < num_taskspace; i++)
             {
-                qd_(i) = msg->data[i]*KDL::deg2rad;
+                x_cmd_(i) = msg->data[i];
             }
         }
     }
@@ -256,15 +261,7 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
     void starting(const ros::Time &time)
     {
         t = 0.0;
-         // 0.2 joint state
-        // for (int i = 0; i < n_joints_; i++)
-        // {
-        //     q_(i) = joints_[i].getPosition();
-        //     qdot_(i) = joints_[i].getVelocity();
-        // }
-
-        
-        ROS_INFO("Starting Gravity Compensation and PD Controller");
+        ROS_INFO("Starting Inverse Dynamics State Space Controller");
     }
 
     void update(const ros::Time &time, const ros::Duration &period)
@@ -279,55 +276,76 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         {
             q_(i) = joints_[i].getPosition();
             qdot_(i) = joints_[i].getVelocity();
+            qddot_(i) = joints_[i].getEffort();
         }
 
-        // ********* 1. Desired Trajecoty in Joint Space *********
+        // 0.3 end-effector state by Compute forward kinematics (x_,xdot_)
+        fk_pos_solver_->JntToCart(q_, x_);
+        xdot_ = J_.data * qdot_.data;
 
-        // ********* 2. Motion Controller in Joint Space*********
-        // *** 2.1 Error Definition in Joint Space ***
+        // ********* 1. Desired Trajectory Generation in task space *********
+
+        // *** 1.1 Desired Trajectory in taskspace ***
+        xd_.p(0) = x_cmd_(0);
+        xd_.p(1) = x_cmd_(1);
+        xd_.p(2) = x_cmd_(2);
+        xd_.M = KDL::Rotation(KDL::Rotation::RPY(x_cmd_(3), x_cmd_(4), x_cmd_(5)));
+
+        // ********* 2. Inverse Kinematics *********
+        // *** 2.0 Error Definition in Task Space ***
+        ex_temp_ = diff(x_, xd_);
+
+        ex_(0) = ex_temp_(0);
+        ex_(1) = ex_temp_(1);
+        ex_(2) = ex_temp_(2);
+        ex_(3) = ex_temp_(3);
+        ex_(4) = ex_temp_(4);
+        ex_(5) = ex_temp_(5);
+
+        ex_dot_ = xd_dot_ - xdot_;
+
+        // *** 2.1 computing Jacobian J(q) ***
+        jnt_to_jac_solver_->JntToJac(q_, J_);
+
+        // *** 2.2 computing Jacobian transpose/inversion ***
+        J_transpose_ = J_.data.transpose();
+        J_inv_ = J_.data.inverse();
+
+        // *** 2.2 computing Jacobian derivative***
+        Jdot_ = J_.data.derived();
+
+        // ********* 3. Motion Controller in Joint Space*********
+        // *** 3.1 Error Definition in Joint Space ***
         e_.data = qd_.data - q_.data;
         e_dot_.data = qd_dot_.data - qdot_.data;
+        e_ddot_.data = qd_ddot_.data - qddot_.data;
         e_int_.data = qd_.data - q_.data; // (To do: e_int 업데이트 필요요)
 
-        // *** 2.2 Compute model(M,C,G) ***
+        // *** 3.2 Compute model(M,C,G) ***
         id_solver_->JntToMass(q_, M_);
         id_solver_->JntToCoriolis(q_, qdot_, C_);
-        id_solver_->JntToGravity(q_, G_); 
+        id_solver_->JntToGravity(q_, G_);
 
-        // *** 2.3 Apply Torque Command to Actuator ***
-        // PD control + gravity compensation
-        // tau_d_.data = G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
+        // *** 3.3 Apply Torque Command to Actuator ***
+        // Feedback
+        sum_e = xd_ddot_ + Kd_.data.cwiseProduct(ex_dot_) + Kp_.data.cwiseProduct(ex_) - Jdot_*qdot_.data;
+
+        // velocity control
+        aux_d_.data = M_.data * (J_inv_*sum_e) ;
+        comp_d_.data = C_.data.cwiseProduct(qdot_.data) + G_.data;
+        tau_d_.data = aux_d_.data + comp_d_.data;
 
         // ISHIRA: Manipulation
-        for (int i = 0; i < n_joints_; i++)
-        {
-            Kp_(i) = pids_[i].getGains().p_gain_;
-            Kd_(i) = pids_[i].getGains().d_gain_;
-            Ki_(i) = pids_[i].getGains().i_gain_;
-        }
-       
-        // for (int i = 0; i < n_joints_; i++)
-        // {
-        //     tau_d_.data[i] = G_.data[i] + pids_[i].computeCommand(e_.data[i], e_dot_.data[i], period);
-        //     joints_[i].setCommand(tau_d_(i));
-        // }
-
-        tau_d_.data = G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
-
         for (int i = 0; i < n_joints_; i++)
         {
             joints_[i].setCommand(tau_d_(i));
         }
 
-        if (loop_count_ % 100 == 0)
-        {
-            // ********* 3. data 저장 *********
-            save_data();
+        // ********* 4. data 저장 *********
+        save_data();
 
-            // ********* 4. state 출력 *********
-            print_state();
-        }
-        loop_count_++;
+        // ********* 5. state 출력 *********
+        print_state();
     }
 
     void stopping(const ros::Time &time)
@@ -442,34 +460,125 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
             printf("t = %f\n", t);
             printf("\n");
 
-            printf("*** Desired State in Joint Space (unit: deg) ***\n");
-            printf("qd_(0): %f, ", qd_(0)*R2D);
-            printf("qd_(1): %f, ", qd_(1)*R2D);
-            printf("qd_(2): %f, ", qd_(2)*R2D);
-            printf("qd_(3): %f, ", qd_(3)*R2D);
-            printf("qd_(4): %f, ", qd_(4)*R2D);
-            printf("qd_(5): %f\n", qd_(5)*R2D);
+            printf("*** Command from Subscriber in Task Space (unit: m) ***\n");
+            printf("x_cmd: %f, ", x_cmd_(0));
+            printf("y_cmd: %f, ", x_cmd_(1));
+            printf("z_cmd: %f, ", x_cmd_(2));
+            printf("r_cmd: %f, ", x_cmd_(3));
+            printf("p_cmd: %f, ", x_cmd_(4));
+            printf("y_cmd: %f\n", x_cmd_(5));
             printf("\n");
 
-            printf("*** Actual State in Joint Space (unit: deg) ***\n");
-            printf("q_(0): %f, ", q_(0) * R2D);
-            printf("q_(1): %f, ", q_(1) * R2D);
-            printf("q_(2): %f, ", q_(2) * R2D);
-            printf("q_(3): %f, ", q_(3) * R2D);
-            printf("q_(4): %f, ", q_(4) * R2D);
-            printf("q_(5): %f\n", q_(5) * R2D);
+            printf("*** Desired Position in Joint Space (unit: deg) ***\n");
+            printf("qd(1): %f, ", qd_(0) * R2D);
+            printf("qd(2): %f, ", qd_(1) * R2D);
+            printf("qd(3): %f, ", qd_(2) * R2D);
+            printf("qd(4): %f, ", qd_(3) * R2D);
+            printf("qd(5): %f, ", qd_(4) * R2D);
+            printf("qd(6): %f\n", qd_(5) * R2D);
             printf("\n");
 
+            printf("*** Actual Position in Joint Space (unit: deg) ***\n");
+            printf("q(1): %f, ", q_(0) * R2D);
+            printf("q(2): %f, ", q_(1) * R2D);
+            printf("q(3): %f, ", q_(2) * R2D);
+            printf("q(4): %f, ", q_(3) * R2D);
+            printf("q(5): %f, ", q_(4) * R2D);
+            printf("q(6): %f\n", q_(5) * R2D);
+            printf("\n");
+
+            printf("*** Desired Position in Task Space (unit: m) ***\n");
+            printf("xd: %f, ", xd_.p(0));
+            printf("yd: %f, ", xd_.p(1));
+            printf("zd: %f\n", xd_.p(2));
+            printf("\n");
+
+            printf("*** Actual Position in Task Space (unit: m) ***\n");
+            printf("x: %f, ", x_.p(0));
+            printf("y: %f, ", x_.p(1));
+            printf("z: %f\n", x_.p(2));
+            printf("\n");
+
+            // printf("*** Desired Orientation in Task Space (unit: ??) ***\n");
+            // printf("xd_(0): %f, ", xd_.M(KDL::Rotation::RPY(0));
+            // printf("xd_(1): %f, ", xd_.M(KDL::Rotation::RPY(1));
+            // printf("xd_(2): %f\n", xd_.M(KDL::Rotation::RPY(2));
+            // printf("\n");
+
+            // printf("*** Actual Orientation in Task Space (unit: ??) ***\n");
+            // printf("x_(0): %f, ", x_.M(KDL::Rotation::RPY(0));
+            // printf("x_(1): %f, ", x_.M(KDL::Rotation::RPY(1));
+            // printf("x_(2): %f\n", x_.M(KDL::Rotation::RPY(2));
+            // printf("\n");
+
+            printf("*** Desired Translation Velocity in Task Space (unit: m/s) ***\n");
+            printf("xd_dot: %f, ", xd_dot_(0));
+            printf("yd_dot: %f, ", xd_dot_(1));
+            printf("zd_dot: %f\n", xd_dot_(2));
+            printf("\n");
+
+            printf("*** Actual Translation Velocity in Task Space (unit: m/s) ***\n");
+            printf("xdot: %f, ", xdot_(0));
+            printf("ydot: %f  ", xdot_(1));
+            printf("zdot: %f\n", xdot_(2));
+            printf("\n");
+
+            printf("*** Desired Angular Velocity in Task Space (unit: rad/s) ***\n");
+            printf("rd_dot: %f, ", xd_dot_(3));
+            printf("pd_dot: %f, ", xd_dot_(4));
+            printf("yd_dot: %f\n", xd_dot_(5));
+            printf("\n");
+
+            printf("*** Actual Angular Velocity in Task Space (unit: rad/s) ***\n");
+            printf("r_dot: %f, ", xdot_(3));
+            printf("p_dot: %f  ", xdot_(4));
+            printf("y_dot: %f\n", xdot_(5));
+            printf("\n");
+
+            printf("*** Desired Rotation Matrix of end-effector ***\n");
+            printf("%f, ",xd_.M(0,0));
+            printf("%f, ",xd_.M(0,1));
+            printf("%f\n",xd_.M(0,2));
+            printf("%f, ",xd_.M(1,0));
+            printf("%f, ",xd_.M(1,1));
+            printf("%f\n",xd_.M(1,2));
+            printf("%f, ",xd_.M(2,0));
+            printf("%f, ",xd_.M(2,1));
+            printf("%f\n",xd_.M(2,2));
+            printf("\n");
+
+            printf("*** Actual Rotation Matrix of end-effector ***\n");
+            printf("%f, ",x_.M(0,0));
+            printf("%f, ",x_.M(0,1));
+            printf("%f\n",x_.M(0,2));
+            printf("%f, ",x_.M(1,0));
+            printf("%f, ",x_.M(1,1));
+            printf("%f\n",x_.M(1,2));
+            printf("%f, ",x_.M(2,0));
+            printf("%f, ",x_.M(2,1));
+            printf("%f\n",x_.M(2,2));
+            printf("\n");
 
             printf("*** Joint Space Error (unit: deg)  ***\n");
-            printf("%f, ", R2D * e_(0));
-            printf("%f, ", R2D * e_(1));
-            printf("%f, ", R2D * e_(2));
-            printf("%f, ", R2D * e_(3));
-            printf("%f, ", R2D * e_(4));
-            printf("%f\n", R2D * e_(5));
+            printf("q1: %f, ", R2D * e_(0));
+            printf("q2: %f, ", R2D * e_(1));
+            printf("q3: %f, ", R2D * e_(2));
+            printf("q4: %f, ", R2D * e_(3));
+            printf("q5: %f, ", R2D * e_(4));
+            printf("q6: %f\n", R2D * e_(5));
             printf("\n");
 
+            printf("*** Task Space Position Error (unit: mm) ***\n");
+            printf("x: %f, ", ex_(0)*1000);
+            printf("y: %f, ", ex_(1)*1000);
+            printf("z: %f\n", ex_(2)*1000);
+            printf("\n");
+
+            printf("*** Task Space Orientation Error ?? (unit: deg) ***\n");
+            printf("r: %f, ", ex_(3)*R2D);
+            printf("p: %f, ", ex_(4)*R2D);
+            printf("y: %f\n", ex_(5)*R2D);
+            printf("\n");
 
             count = 0;
         }
@@ -479,7 +588,6 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
   private:
     // others
     double t;
-    int loop_count_;
 
     //Joint handles
     unsigned int n_joints_;                               // joint 숫자
@@ -497,14 +605,40 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
     KDL::JntArray G_;              // gravity torque vector
     KDL::Vector gravity_;
 
+    // kdl and Eigen Jacobian
+    KDL::Jacobian J_;
+    Eigen::MatrixXd Jdot_;
+    Eigen::MatrixXd J_inv_;
+    Eigen::Matrix<double, num_taskspace, num_taskspace> J_transpose_;
+
     // kdl solver
+    boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_; //Solver to compute the forward kinematics (position)
+    // boost::scoped_ptr<KDL::ChainFkSolverVel_recursive> fk_vel_solver_; //Solver to compute the forward kinematics (velocity)
+    boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_; //Solver to compute the jacobian
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
 
     // Joint Space State
     KDL::JntArray qd_, qd_dot_, qd_ddot_;
     KDL::JntArray qd_old_;
-    KDL::JntArray q_, qdot_;
-    KDL::JntArray e_, e_dot_, e_int_;
+    KDL::JntArray q_, qdot_, qddot_;
+    KDL::JntArray e_, e_dot_, e_ddot_, e_int_;
+    KDL::JntArray desired_;
+
+
+    // Task Space State
+    // ver. 01
+    KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
+    KDL::Frame x_;
+    KDL::Twist ex_temp_;
+
+    // KDL::Twist xd_dot_, xd_ddot_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_;
+    Eigen::Matrix<double, num_taskspace, 1> xd_dot_, xd_ddot_;
+    Eigen::Matrix<double, num_taskspace, 1> xdot_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_dot_, ex_int_, sum_e, blah;
+
+    // Input
+    KDL::JntArray x_cmd_;
 
     // Input
     KDL::JntArray aux_d_;
@@ -513,16 +647,16 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
 
     // gains
     KDL::JntArray Kp_, Ki_, Kd_;
-    std::vector<control_toolbox::Pid> pids_;       /**< Internal PID controllers. */
 
     // save the data
     double SaveData_[SaveDataMax];
 
     // ros publisher
     ros::Publisher pub_qd_, pub_q_, pub_e_;
+    ros::Publisher pub_xd_, pub_x_, pub_ex_;
     ros::Publisher pub_SaveData_;
 
-    // ros subsciber
+    // ros subscriber
     ros::Subscriber sub;
 
     // ros message
@@ -530,4 +664,4 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
     std_msgs::Float64MultiArray msg_SaveData_;
 };
 }; // namespace arm_controllers
-PLUGINLIB_EXPORT_CLASS(arm_controllers::GravityPD_Controller, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(arm_controllers::InverseDynamics_Controller, controller_interface::ControllerBase)

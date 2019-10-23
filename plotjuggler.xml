@@ -1,0 +1,130 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root version="2.3.0">
+ <tabbed_widget parent="main_window" name="Main Window">
+  <plotmatrix tab_name="Velocity - Error" columns="1" rows="1">
+   <plot col="0" row="0">
+    <range right="33.196000" top="0.383608" left="28.196000" bottom="-2.637670"/>
+    <limitY min="-2.63767"/>
+    <curve R="31" G="119" custom_transform="noTransform" B="180" name="/elfin/velocity_controller/e/data.0"/>
+    <curve R="214" G="39" custom_transform="noTransform" B="40" name="/elfin/velocity_controller/e/data.1"/>
+    <curve R="26" G="201" custom_transform="noTransform" B="56" name="/elfin/velocity_controller/e/data.2"/>
+    <curve R="255" G="127" custom_transform="noTransform" B="14" name="/elfin/velocity_controller/e/data.3"/>
+    <curve R="241" G="76" custom_transform="noTransform" B="193" name="/elfin/velocity_controller/e/data.4"/>
+    <curve R="148" G="103" custom_transform="noTransform" B="189" name="/elfin/velocity_controller/e/data.5"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <plotmatrix tab_name="Position" columns="2" rows="3">
+   <plot col="0" row="0">
+    <range right="37.196000" top="0.000368" left="32.196000" bottom="-0.015075"/>
+    <limitY/>
+    <curve R="23" G="190" custom_transform="noTransform" B="207" name="/elfin/velocity_controller/q/data.0"/>
+    <curve R="188" G="189" custom_transform="noTransform" B="34" name="/elfin/velocity_controller/qd/data.0"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="1">
+    <range right="37.196000" top="1.577871" left="32.196000" bottom="-1.646133"/>
+    <limitY/>
+    <curve R="26" G="201" custom_transform="noTransform" B="56" name="/elfin/velocity_controller/q/data.2"/>
+    <curve R="255" G="127" custom_transform="noTransform" B="14" name="/elfin/velocity_controller/qd/data.2"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="2">
+    <range right="37.196000" top="2.141269" left="32.196000" bottom="-0.052226"/>
+    <limitY/>
+    <curve R="23" G="190" custom_transform="noTransform" B="207" name="/elfin/velocity_controller/q/data.4"/>
+    <curve R="188" G="189" custom_transform="noTransform" B="34" name="/elfin/velocity_controller/qd/data.4"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="0">
+    <range right="37.196000" top="0.739944" left="32.196000" bottom="-0.018047"/>
+    <limitY/>
+    <curve R="31" G="119" custom_transform="noTransform" B="180" name="/elfin/velocity_controller/q/data.1"/>
+    <curve R="214" G="39" custom_transform="noTransform" B="40" name="/elfin/velocity_controller/qd/data.1"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="1">
+    <range right="37.196000" top="0.000366" left="32.196000" bottom="-0.015001"/>
+    <limitY/>
+    <curve R="241" G="76" custom_transform="noTransform" B="193" name="/elfin/velocity_controller/q/data.3"/>
+    <curve R="148" G="103" custom_transform="noTransform" B="189" name="/elfin/velocity_controller/qd/data.3"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="2">
+    <range right="37.196000" top="0.001786" left="32.196000" bottom="-0.073232"/>
+    <limitY/>
+    <curve R="214" G="39" custom_transform="noTransform" B="40" name="/elfin/velocity_controller/q/data.5"/>
+    <curve R="31" G="119" custom_transform="noTransform" B="180" name="/elfin/velocity_controller/qd/data.5"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <currentPlotMatrix index="1"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="1"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <!-- - - - - - - - - - - - - - - -->
+ <Plugins>
+  <plugin ID="DataLoad_CSV">
+   <default time_axis=""/>
+  </plugin>
+  <plugin ID="DataLoad_ROS_bags">
+   <use_header_stamp value="false"/>
+   <use_renaming_rules value="true"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+  </plugin>
+  <plugin ID="DataLoad_ULog"/>
+  <plugin ID="ROS_Topic_Streamer">
+   <use_header_stamp value="false"/>
+   <use_renaming_rules value="true"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+  </plugin>
+  <plugin ID="RosoutPublisherROS" status="idle"/>
+  <plugin ID="TopicPublisherROS" status="idle"/>
+ </Plugins>
+ <!-- - - - - - - - - - - - - - - -->
+ <previouslyLoaded_Datafiles/>
+ <previouslyLoaded_Streamer name="ROS_Topic_Streamer"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <customMathEquations/>
+ <snippets>
+  <snippet name="1st_derivative">
+   <global>var prevX = 0
+var prevY = 0</global>
+   <equation>dx = time - prevX
+dy = value - prevY
+prevX = time
+prevY = value
+
+return dy/dx</equation>
+  </snippet>
+  <snippet name="1st_order_lowpass">
+   <global>var prevY = 0
+var alpha = 0.1</global>
+   <equation>prevY = alpha * value + (1.-alpha) * prevY
+
+return prevY</equation>
+  </snippet>
+  <snippet name="sum_A_B">
+   <global></global>
+   <equation>return $$PLOT_A$$ + $$PLOT_B$$</equation>
+  </snippet>
+  <snippet name="yaw_from_quaternion">
+   <global>// source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+function quaternionToYaw(x, y, z, w)
+{
+  // yaw (z-axis rotation)
+  t1 = 2.0 * (w * z + x * y);
+  t2 = 1.0 - 2.0 * (y * y + z * z);
+  yaw = Math.atan2(t1, t2);
+
+  return yaw
+}</global>
+   <equation>return quaternionToYaw(x, y, z, w);</equation>
+  </snippet>
+ </snippets>
+ <!-- - - - - - - - - - - - - - - -->
+</root>
+
