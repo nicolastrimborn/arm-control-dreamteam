@@ -44,6 +44,7 @@ add_library(${PROJECT_NAME}
   src/passivity_controller.cpp
   src/velocity_controller.cpp
   src/gravityPD_controller.cpp
+  src/inverse_dynamics_task_space.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})

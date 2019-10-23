@@ -48,5 +48,11 @@
     </description>
   </class>
 
+  <class name="arm_controllers/InverseDynamics_Controller" type="arm_controllers::InverseDynamics_Controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Inverse Dynamics Task Space Controller
+    </description>
+  </class>
+
 </library>
 
