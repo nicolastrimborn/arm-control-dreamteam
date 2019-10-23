@@ -1,7 +1,7 @@
 // from ros-control meta packages
 #include <controller_interface/controller.h>
 #include <hardware_interface/joint_command_interface.h>
-
+#include <control_toolbox/pid.h>
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
 
@@ -29,6 +29,7 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
   public:
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n)
     {
+        loop_count_ = 0;
         // ********* 1. Get joint name / gain from the parameter server *********
         // 1.1 Joint Name
         if (!n.getParam("joints", joint_names_))
@@ -52,47 +53,50 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
             }
         }
 
-        // 1.2 Gain
-        // 1.2.1 Joint Controller
+     
+        // // 1.2 Gain
+        // // 1.2.1 Joint Controller
         Kp_.resize(n_joints_);
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
 
-        std::vector<double> Kp(n_joints_), Ki(n_joints_), Kd(n_joints_);
-        for (size_t i = 0; i < n_joints_; i++)
-        {
-            std::string si = boost::lexical_cast<std::string>(i + 1);
-            if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/p", Kp[i]))
-            {
-                Kp_(i) = Kp[i];
-            }
-            else
-            {
-                std::cout << "/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/p" << std::endl;
-                ROS_ERROR("Cannot find pid/p gain");
-                return false;
-            }
+        
+        // std::vector<double> Kp(n_joints_), Ki(n_joints_), Kd(n_joints_);
+        
+        // // for (size_t i = 0; i < n_joints_; i++)
+        // {
+        //     std::string si = boost::lexical_cast<std::string>(i + 1);
+        //     if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/p", Kp[i]))
+        //     {
+        //         Kp_(i) = Kp[i];
+        //     }
+        //     else
+        //     {
+        //         std::cout << "/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/p" << std::endl;
+        //         ROS_ERROR("Cannot find pid/p gain");
+        //         return false;
+        //     }
 
-            if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/i", Ki[i]))
-            {
-                Ki_(i) = Ki[i];
-            }
-            else
-            {
-                ROS_ERROR("Cannot find pid/i gain");
-                return false;
-            }
+        //     if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/i", Ki[i]))
+        //     {
+        //         Ki_(i) = Ki[i];
+        //     }
+        //     else
+        //     {
+        //         ROS_ERROR("Cannot find pid/i gain");
+        //         return false;
+        //     }
 
-            if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/d", Kd[i]))
-            {
-                Kd_(i) = Kd[i];
-            }
-            else
-            {
-                ROS_ERROR("Cannot find pid/d gain");
-                return false;
-            }
-        }
+        //     if (n.getParam("/elfin/gravityPD_controller/gains/elfin_joint" + si + "/pid/d", Kd[i]))
+        //     {
+        //         Kd_(i) = Kd[i];
+        //     }
+        //     else
+        //     {
+        //         ROS_ERROR("Cannot find pid/d gain");
+        //         return false;
+        //     }
+        // }
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -196,10 +200,30 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         e_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         e_int_.data = Eigen::VectorXd::Zero(n_joints_);
 
+
+         // PIDS////////////////////////////////////////////////////////////////
+
+        // pids
+        pids_.resize(n_joints_);
+        for (size_t i=0; i<n_joints_; i++)
+        {
+            // Load PID Controller using gains set on parameter server
+            if (!pids_[i].init(ros::NodeHandle(n, "gains/" + joint_names_[i] + "/pid")))
+            {
+                ROS_ERROR_STREAM("Failed to load PID parameters from " << joint_names_[i] + "/pid");
+                return false;
+            }
+        }
+
+        /////////////////////////////////////////////////////////////////////////
+
+
+
         // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
+
 
         // ********* 6. ROS 명령어 *********
         // 6.1 publisher
@@ -232,6 +256,14 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
     void starting(const ros::Time &time)
     {
         t = 0.0;
+         // 0.2 joint state
+        // for (int i = 0; i < n_joints_; i++)
+        // {
+        //     q_(i) = joints_[i].getPosition();
+        //     qdot_(i) = joints_[i].getVelocity();
+        // }
+
+        
         ROS_INFO("Starting Gravity Compensation and PD Controller");
     }
 
@@ -264,20 +296,38 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
 
         // *** 2.3 Apply Torque Command to Actuator ***
         // PD control + gravity compensation
-        tau_d_.data = G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
+        // tau_d_.data = G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
 
         // ISHIRA: Manipulation
         for (int i = 0; i < n_joints_; i++)
         {
+            Kp_(i) = pids_[i].getGains().p_gain_;
+            Kd_(i) = pids_[i].getGains().d_gain_;
+            Ki_(i) = pids_[i].getGains().i_gain_;
+        }
+       
+        // for (int i = 0; i < n_joints_; i++)
+        // {
+        //     tau_d_.data[i] = G_.data[i] + pids_[i].computeCommand(e_.data[i], e_dot_.data[i], period);
+        //     joints_[i].setCommand(tau_d_(i));
+        // }
+
+        tau_d_.data = G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
+
+        for (int i = 0; i < n_joints_; i++)
+        {
             joints_[i].setCommand(tau_d_(i));
-            // joints_[i].setCommand(0.0);
         }
 
-        // ********* 3. data 저장 *********
-        save_data();
+        if (loop_count_ % 100 == 0)
+        {
+            // ********* 3. data 저장 *********
+            save_data();
 
-        // ********* 4. state 출력 *********
-        print_state();
+            // ********* 4. state 출력 *********
+            print_state();
+        }
+        loop_count_++;
     }
 
     void stopping(const ros::Time &time)
@@ -429,6 +479,7 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
   private:
     // others
     double t;
+    int loop_count_;
 
     //Joint handles
     unsigned int n_joints_;                               // joint 숫자
@@ -462,6 +513,7 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
 
     // gains
     KDL::JntArray Kp_, Ki_, Kd_;
+    std::vector<control_toolbox::Pid> pids_;       /**< Internal PID controllers. */
 
     // save the data
     double SaveData_[SaveDataMax];

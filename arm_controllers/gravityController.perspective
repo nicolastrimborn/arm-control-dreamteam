@@ -1,0 +1,795 @@
+{
+  "keys": {},
+  "groups": {
+    "pluginmanager": {
+      "keys": {
+        "running-plugins": {
+          "type": "repr",
+          "repr": "{u'rqt_reconfigure/Param': [1], u'rqt_publisher/Publisher': [1]}"
+        }
+      },
+      "groups": {
+        "plugin____DockWidgetContainer__1": {
+          "keys": {},
+          "groups": {
+            "dock_widget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Container'"
+                }
+              },
+              "groups": {
+                "mainwindow": {
+                  "keys": {
+                    "geometry": {
+                      "type": "repr(QByteArray.hex)",
+                      "repr(QByteArray.hex)": "QtCore.QByteArray('01d9d0cb000200000000000000000018000003ba000003fd0000000000000000ffffffffffffffff00000000000000000a00')",
+                      "pretty-print": "                         "
+                    },
+                    "state": {
+                      "type": "repr(QByteArray.hex)",
+                      "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff00000000fd0000000200000002000003bb000003e6fc0100000001fb0000006c007200710074005f007200650063006f006e006600690067007500720065005f005f0050006100720061006d005f005f0031005f005f005f0070006c007500670069006e0063006f006e007400610069006e00650072005f0074006f0070005f0077006900640067006500740100000000000003bb0000010300ffffff000000030000000000000000fc0100000001fb00000058007200710074005f007000750062006c00690073006800650072005f005f005000750062006c00690073006800650072005f005f0031005f005f005000750062006c00690073006800650072005700690064006700650074030000059100000153000003bb000003c50000015a0000000000000004000000040000000800000008fc00000000')",
+                      "pretty-print": "                 lrqt_reconfigure__Param__1___plugincontainer_top_widget                   Xrqt_publisher__Publisher__1__PublisherWidget                       "
+                    }
+                  },
+                  "groups": {}
+                }
+              }
+            }
+          }
+        },
+        "plugin__rqt_plot__Plot__8": {
+          "keys": {},
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Joint2'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "u'1'"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "u''"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_robot_steering__RobotSteering__1": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "topic": {
+                  "type": "repr",
+                  "repr": "u'/cmd_vel'"
+                },
+                "vx_min": {
+                  "type": "repr",
+                  "repr": "-1.0"
+                },
+                "vw_min": {
+                  "type": "repr",
+                  "repr": "-3.0"
+                },
+                "vw_max": {
+                  "type": "repr",
+                  "repr": "3.0"
+                },
+                "vx_max": {
+                  "type": "repr",
+                  "repr": "1.0"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__MultiplotPlugin__2": {
+          "keys": {},
+          "groups": {
+            "dock_widget__MultiplotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Errors'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {},
+              "groups": {
+                "history": {
+                  "keys": {
+                    "max_length": {
+                      "type": "repr",
+                      "repr": "u'10'"
+                    }
+                  },
+                  "groups": {}
+                }
+              }
+            }
+          }
+        },
+        "plugin__rqt_reconfigure__Param__1": {
+          "keys": {},
+          "groups": {
+            "dock_widget___plugincontainer_top_widget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "True"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Dynamic Reconfigure'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "splitter": {
+                  "type": "repr(QByteArray.hex)",
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000100000002000001400000051d01ffffffff010000000100')",
+                  "pretty-print": "       @       "
+                },
+                "_splitter": {
+                  "type": "repr(QByteArray.hex)",
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff00000001000000020000024b0000005d0100000009010000000200')",
+                  "pretty-print": "       K ]     "
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__MultiplotPlugin__1": {
+          "keys": {},
+          "groups": {
+            "dock_widget__MultiplotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Joint Positions'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {},
+              "groups": {
+                "history": {
+                  "keys": {
+                    "max_length": {
+                      "type": "repr",
+                      "repr": "u'10'"
+                    }
+                  },
+                  "groups": {}
+                }
+              }
+            }
+          }
+        },
+        "plugin__rqt_plot__Plot__1": {
+          "keys": {},
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'q'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "u'false'"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "u'1'"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "[u'/elfin/gravityPD_controller/qd/data[0]', u'/elfin/gravityPD_controller/q/data[0]']"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[u'-0.016649138425587573', u'1']"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[u'674.63600000000008', u'675.63600000000008']"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_plot__Plot__2": {
+          "keys": {},
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "True"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'PyQtGraph (2)'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "True"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "0"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "[u'/elfin/gravityPD_controller/e/data[5]', u'/elfin/gravityPD_controller/e/data[4]', u'/elfin/gravityPD_controller/e/data[0]', u'/elfin/gravityPD_controller/e/data[3]', u'/elfin/gravityPD_controller/e/data[2]', u'/elfin/gravityPD_controller/e/data[1]']"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[-2.1738210369331306, 1.3792913958919089]"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[172.75177166421258, 176.117]"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_plot__Plot__3": {
+          "keys": {},
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "True"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'PyQtGraph (3)'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "True"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "0"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "[u'/elfin/gravityPD_controller/qd/data[0]', u'/elfin/gravityPD_controller/q/data[0]']"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[-0.028567446885890135, 0.0018820830489859061]"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[145.5642386826541, 175.83]"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_plot__Plot__4": {
+          "keys": {},
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Joint6'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "u'1'"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "u''"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_plot__Plot__5": {
+          "keys": {},
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Joint5'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "u'1'"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "u''"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_plot__Plot__6": {
+          "keys": {},
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Joint4'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "u'1'"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "u''"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_plot__Plot__7": {
+          "keys": {},
+          "groups": {
+            "dock_widget__DataPlotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Joint3'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "u'1'"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "u''"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[u'0', u'1']"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_graph__RosGraph__1": {
+          "keys": {},
+          "groups": {
+            "dock_widget__RosGraphUi": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Node Graph'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "graph_type_combo_box_index": {
+                  "type": "repr",
+                  "repr": "u'1'"
+                },
+                "topic_filter_line_edit_text": {
+                  "type": "repr",
+                  "repr": "u'/'"
+                },
+                "filter_line_edit_text": {
+                  "type": "repr",
+                  "repr": "u'/'"
+                },
+                "highlight_connections_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "unreachable_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "actionlib_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "quiet_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "dead_sinks_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "leaf_topics_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "namespace_cluster_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "auto_fit_graph_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_publisher__Publisher__1": {
+          "keys": {},
+          "groups": {
+            "dock_widget__PublisherWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "True"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Message Publisher'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {
+                "publishers": {
+                  "type": "repr",
+                  "repr": "u\"[{'type_name': 'std_msgs/Float64MultiArray', 'topic_name': '/elfin/gravityPD_controller/command', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/gravityPD_controller/command/data': '[0.0 ,0.0, 90, 0, 0.0,0.0]'}, 'publisher_id': 0, 'counter': 474}]\""
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_publisher__Publisher__2": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "publishers": {
+                  "type": "repr",
+                  "repr": "u'[]'"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_joint_trajectory_controller__JointTrajectoryController__1": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "jtc_name": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "cm_ns": {
+                  "type": "repr",
+                  "repr": "u'/elfin/controller_manager'"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_dep__RosPackGraph__1": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "filter_line_edit_text": {
+                  "type": "repr",
+                  "repr": "u'(Separate pkgs by comma)'"
+                },
+                "highlight_connections_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "with_stacks_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "depth_combo_box_index": {
+                  "type": "repr",
+                  "repr": "u'0'"
+                },
+                "hide_transitives_state": {
+                  "type": "repr",
+                  "repr": "u'false'"
+                },
+                "package_type_combo_box": {
+                  "type": "repr",
+                  "repr": "u'0'"
+                },
+                "directions_combo_box_index": {
+                  "type": "repr",
+                  "repr": "u'0'"
+                },
+                "colorize_state": {
+                  "type": "repr",
+                  "repr": "u'false'"
+                },
+                "mark_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "show_system_state": {
+                  "type": "repr",
+                  "repr": "u'false'"
+                },
+                "auto_fit_graph_check_box_state": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_shell__Shell__1": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "shell_type": {
+                  "type": "repr",
+                  "repr": "u'2'"
+                }
+              },
+              "groups": {}
+            }
+          }
+        }
+      }
+    },
+    "mainwindow": {
+      "keys": {
+        "geometry": {
+          "type": "repr(QByteArray.hex)",
+          "repr(QByteArray.hex)": "QtCore.QByteArray('01d9d0cb0002000000000071000001ff00000557000004b7000000710000022d00000557000004b700000000000000000a00')",
+          "pretty-print": "     q   W   q - W       "
+        },
+        "state": {
+          "type": "repr(QByteArray.hex)",
+          "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff00000000fd0000000100000003000004e700000256fc0100000009fb000000b4007200710074005f006a006f0069006e0074005f007400720061006a006500630074006f00720079005f0063006f006e00740072006f006c006c00650072005f005f004a006f0069006e0074005400720061006a006500630074006f007200790043006f006e00740072006f006c006c00650072005f005f0031005f005f004a006f0069006e0074005400720061006a006500630074006f007200790043006f006e00740072006f006c006c006500720055006901000003be000001050000000000000000fc00000000000002850000000000fffffffc0100000002fc00000000000002850000000000fffffffa000000000200000008fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0033005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0038005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0037005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0036005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0035005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0034005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0032005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0031005f005f00440061007400610050006c006f0074005700690064006700650074010000001c000003fe0000000000000000fb00000030005f005f0044006f0063006b0057006900640067006500740043006f006e007400610069006e00650072005f005f0031010000019e000002430000000000000000fc000002ff0000038f0000000000fffffffc0200000002fb00000040007200710074005f007300680065006c006c005f005f005300680065006c006c005f005f0031005f005f005300680065006c006c005700690064006700650074010000001b000000750000000000000000fb00000044007200710074005f00670072006100700068005f005f0052006f007300470072006100700068005f005f0031005f005f0052006f00730047007200610070006800550069010000001b000003b40000000000000000fb00000050007200710074005f006400650070005f005f0052006f0073005000610063006b00470072006100700068005f005f0031005f005f0052006f0073005000610063006b00470072006100700068005500690100000395000002c30000000000000000fb00000058007200710074005f007000750062006c00690073006800650072005f005f005000750062006c00690073006800650072005f005f0032005f005f005000750062006c0069007300680065007200570069006400670065007401000001650000027c0000000000000000fc00000000000004e70000027c00fffffffc0200000002fb0000006c007200710074005f007200650063006f006e006600690067007500720065005f005f0050006100720061006d005f005f0031005f005f005f0070006c007500670069006e0063006f006e007400610069006e00650072005f0074006f0070005f007700690064006700650074010000001c000001910000011200fffffffb00000058007200710074005f007000750062006c00690073006800650072005f005f005000750062006c00690073006800650072005f005f0031005f005f005000750062006c0069007300680065007200570069006400670065007401000001b3000000bf0000009800fffffffc000003d40000038a0000000000fffffffa000000000200000002fb00000046004d0075006c007400690070006c006f00740050006c007500670069006e005f005f0032005f005f004d0075006c007400690070006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000046004d0075006c007400690070006c006f00740050006c007500670069006e005f005f0031005f005f004d0075006c007400690070006c006f0074005700690064006700650074010000001c000003bd0000000000000000fb00000050007200710074005f0061006300740069006f006e005f005f0041006300740069006f006e0050006c007500670069006e005f005f0031005f005f006d0065007300730061006700650073002e007500690100000282000002650000000000000000fb0000006a007200710074005f0072006f0062006f0074005f007300740065006500720069006e0067005f005f0052006f0062006f0074005300740065006500720069006e0067005f005f0031005f005f0052006f0062006f0074005300740065006500720069006e00670055006901000003ec000000fb0000000000000000000004e70000000000000004000000040000000800000008fc00000001000000030000000100000036004d0069006e0069006d0069007a006500640044006f0063006b00570069006400670065007400730054006f006f006c0062006100720000000000ffffffff0000000000000000')",
+          "pretty-print": "                  rqt_joint_trajectory_controller__JointTrajectoryController__1__JointTrajectoryControllerUi                                   Brqt_plot__Plot__3__DataPlotWidget          Brqt_plot__Plot__8__DataPlotWidget          Brqt_plot__Plot__7__DataPlotWidget          Brqt_plot__Plot__6__DataPlotWidget          Brqt_plot__Plot__5__DataPlotWidget          Brqt_plot__Plot__4__DataPlotWidget          Brqt_plot__Plot__2__DataPlotWidget          Brqt_plot__Plot__1__DataPlotWidget          0__DockWidgetContainer__1                                                          u                                                                                                                                                    e |                 lrqt_reconfigure__Param__1___plugincontainer_top_widget          Xrqt_publisher__Publisher__1__PublisherWidget                                                                                                                                                                e                                                                                                                            "
+        }
+      },
+      "groups": {
+        "toolbar_areas": {
+          "keys": {
+            "MinimizedDockWidgetsToolbar": {
+              "type": "repr",
+              "repr": "8"
+            }
+          },
+          "groups": {}
+        }
+      }
+    }
+  }
+}
