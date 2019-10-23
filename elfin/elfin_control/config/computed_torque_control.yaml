@@ -14,7 +14,7 @@ elfin:
         - elfin_joint6
       gains:
         elfin_joint1: 
-          pid: {p: 100.0, i: 0, d: 20.0}
+          pid: {p: 200.0, i: 0, d: 20.0}
         elfin_joint2: 
           pid: {p: 100.0, i: 0, d: 20.0}
         elfin_joint3: 

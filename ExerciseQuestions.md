@@ -37,10 +37,13 @@ http://wiki.ros.org/urdf
 Contains a C++ parser for the Unified Robot Description Format (URDF), which is an XML format for representing a robot model.
 
 ## To Run
-Launch the controller
-$ roslaunch elfin_launch gravityPD_controller.launch
-Define desired joints in data
-$ rostopic pub -r 1000 /elfin/gravityPD_controller/command std_msgs/Float64MultiArray """data: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]"""
+#### Launch the controller
+
+    $ roslaunch elfin_launch gravityPD_controller.launch
+
+#### Define desired joints in data (in degrees)
+
+    $ rostopic pub /elfin/gravityPD_controller/command std_msgs/Float64MultiArray """data: [0.0, 0.0, 90.0, 0.0, 0.0, 0.0]"""
 
 ## Reza Notes
 The Jacobian Calculation is not in the correct place. Correct it when moving to task space control
