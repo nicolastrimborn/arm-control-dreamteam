@@ -44,6 +44,10 @@ Contains a C++ parser for the Unified Robot Description Format (URDF), which is 
 #### Define desired joints in data (in degrees)
 
     $ rostopic pub /elfin/gravityPD_controller/command std_msgs/Float64MultiArray """data: [0.0, 0.0, 90.0, 0.0, 0.0, 0.0]"""
+    
+    $ rostopic pub /elfin/velocity_controller/command std_msgs/Float64MultiArray """data: [0.0, 0.0, 90.0, 0.0, 0.0, 0.0]"""
 
+    $ rostopic pub /elfin/inverse_dynamic_controller/command std_msgs/Float64MultiArray """data: [0.2, 0.1, 0.3, 0.0, 0.0, 0.0]"""
+    $ rostopic pub /elfin/kinematic_controller/command std_msgs/Float64MultiArray """data: [0.2, 0.1, 0.3, 0.0, 0.0, 0.0]"""
 ## Reza Notes
 The Jacobian Calculation is not in the correct place. Correct it when moving to task space control
