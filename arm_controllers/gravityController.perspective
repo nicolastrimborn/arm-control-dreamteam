@@ -250,7 +250,7 @@
                 },
                 "mouse_pub_topic": {
                   "type": "repr",
-                  "repr": "u'/rrbot/camera1/image_raw_mouse_left'"
+                  "repr": "u'/elfin/camera/image_raw_mouse_left'"
                 },
                 "num_gridlines": {
                   "type": "repr",
@@ -270,7 +270,7 @@
                 },
                 "topic": {
                   "type": "repr",
-                  "repr": "u'/rrbot/camera1/image_raw'"
+                  "repr": "u'/elfin/camera/image_raw'"
                 },
                 "publish_click_location": {
                   "type": "repr",
@@ -694,7 +694,7 @@
               "keys": {
                 "publishers": {
                   "type": "repr",
-                  "repr": "u\"[{'type_name': 'std_msgs/Float64MultiArray', 'topic_name': '/elfin/gravityPD_controller/command', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/gravityPD_controller/command/data': '[0.0 ,0.0, 120, 0, 0.0,0.0]'}, 'publisher_id': 0, 'counter': 49}]\""
+                  "repr": "u\"[{'topic_name': '/elfin/gravityPD_controller/command', 'type_name': 'std_msgs/Float64MultiArray', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/gravityPD_controller/command/data': '[0.0 ,0.0, 120, 0, 0.0,0.0]'}, 'publisher_id': 0, 'counter': 11}]\""
                 }
               },
               "groups": {}
