@@ -420,23 +420,23 @@
       effort="120"
       velocity="1.57" />
   </joint>
+
+  <link name="elfin_end_link"/>
   
-  <link name="elfin_dummy_gripper"/>
-  
-  <joint name="elfin_dummy_joint" type="fixed">
+  <joint name="elfin_end_joint" type="fixed">
     <origin
-      xyz="0 -0.111 0"
+      xyz="0 -0.091 0"
       rpy="${PI/2} ${-PI/2} 0" />
     <parent
       link="elfin_link6" />
     <child
-      link="elfin_dummy_gripper" />
+      link="elfin_end_link" />
   </joint>
 
   <joint name="camera_joint" type="fixed">
     <axis xyz="0 1 0" />
-    <origin xyz="${camera_link} 0 0" rpy="0 0 0"/>
-    <parent link="elfin_dummy_gripper"/>
+    <origin xyz="0 0 0" rpy="0 ${-PI/2} 0"/>
+    <parent link="elfin_end_link"/>
     <child link="camera_link"/>
   </joint>
 
