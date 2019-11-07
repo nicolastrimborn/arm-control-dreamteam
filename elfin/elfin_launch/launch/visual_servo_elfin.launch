@@ -1,0 +1,6 @@
+<launch>
+  <include file="$(find elfin_gazebo)/launch/elfin3_visualservo_world.launch" />
+  
+  <include file="$(find elfin_control)/launch/gravityPD_control.launch" />
+  
+</launch>
