@@ -11,7 +11,7 @@
   <node name="urdf_spawner2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -model box -param robot_description1"/> 
 
   <!-- Spaw Fiducials -->
-  <arg name="path" default="$(find fiducial_slam)/aruco_gazebo/aruco_visual_marker_7/model.sdf" />
+  <arg name="path" default="$(find elfin_markers)/markers/aruco_visual_marker_7/model.sdf" />
   <node name="urdf_spawner3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-sdf -model -file $(arg path) -x 0.6 -z 0.1"/> 
 
 </launch>
