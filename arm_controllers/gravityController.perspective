@@ -5,7 +5,7 @@
       "keys": {
         "running-plugins": {
           "type": "repr",
-          "repr": "{u'rqt_image_view/ImageView': [1], u'rqt_publisher/Publisher': [1]}"
+          "repr": "{u'rqt_image_view/ImageView': [2, 1], u'rqt_topic/TopicPlugin': [1], u'rqt_publisher/Publisher': [1]}"
         }
       },
       "groups": {
@@ -44,6 +44,154 @@
                   "groups": {}
                 }
               }
+            }
+          }
+        },
+        "plugin__rqt_robot_steering__RobotSteering__1": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "topic": {
+                  "type": "repr",
+                  "repr": "u'/cmd_vel'"
+                },
+                "vx_min": {
+                  "type": "repr",
+                  "repr": "-1.0"
+                },
+                "vw_min": {
+                  "type": "repr",
+                  "repr": "-3.0"
+                },
+                "vw_max": {
+                  "type": "repr",
+                  "repr": "3.0"
+                },
+                "vx_max": {
+                  "type": "repr",
+                  "repr": "1.0"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__MultiplotPlugin__2": {
+          "keys": {},
+          "groups": {
+            "dock_widget__MultiplotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Errors'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {},
+              "groups": {
+                "history": {
+                  "keys": {
+                    "max_length": {
+                      "type": "repr",
+                      "repr": "u'10'"
+                    }
+                  },
+                  "groups": {}
+                }
+              }
+            }
+          }
+        },
+        "plugin__MultiplotPlugin__1": {
+          "keys": {},
+          "groups": {
+            "dock_widget__MultiplotWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "u'true'"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Joint Positions'"
+                }
+              },
+              "groups": {}
+            },
+            "plugin": {
+              "keys": {},
+              "groups": {
+                "history": {
+                  "keys": {
+                    "max_length": {
+                      "type": "repr",
+                      "repr": "u'10'"
+                    }
+                  },
+                  "groups": {}
+                }
+              }
+            }
+          }
+        },
+        "plugin__rqt_shell__Shell__1": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "shell_type": {
+                  "type": "repr",
+                  "repr": "u'2'"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_topic__TopicPlugin__1": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "tree_widget_header_state": {
+                  "type": "repr(QByteArray.hex)",
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff00000000000000010000000000000000010000000000000000000000000000000000000439000000050101000100000000000000000000000064ffffffff0000008100000000000000050000021500000001000000000000010a0000000100000000000000730000000100000000000000430000000100000000000000640000000100000000000003e800')",
+                  "pretty-print": "                              d                     s     C     d      "
+                }
+              },
+              "groups": {}
+            },
+            "dock_widget__TopicWidget": {
+              "keys": {
+                "dockable": {
+                  "type": "repr",
+                  "repr": "True"
+                },
+                "parent": {
+                  "type": "repr",
+                  "repr": "None"
+                },
+                "dock_widget_title": {
+                  "type": "repr",
+                  "repr": "u'Topic Monitor'"
+                }
+              },
+              "groups": {}
             }
           }
         },
@@ -94,10 +242,10 @@
             }
           }
         },
-        "plugin__rqt_plot__Plot__3": {
+        "plugin__rqt_image_view__ImageView__2": {
           "keys": {},
           "groups": {
-            "dock_widget__DataPlotWidget": {
+            "dock_widget__ImageViewWidget": {
               "keys": {
                 "dockable": {
                   "type": "repr",
@@ -109,71 +257,55 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'PyQtGraph (3)'"
+                  "repr": "u'Image View (2)'"
                 }
               },
               "groups": {}
             },
             "plugin": {
               "keys": {
-                "autoscroll": {
+                "max_range": {
                   "type": "repr",
-                  "repr": "True"
+                  "repr": "10.0"
                 },
-                "plot_type": {
+                "rotate": {
                   "type": "repr",
                   "repr": "0"
                 },
-                "topics": {
+                "smooth_image": {
                   "type": "repr",
-                  "repr": "[u'/elfin/gravityPD_controller/qd/data[0]', u'/elfin/gravityPD_controller/q/data[0]']"
+                  "repr": "False"
                 },
-                "y_limits": {
+                "mouse_pub_topic": {
                   "type": "repr",
-                  "repr": "[-0.028567446885890135, 0.0018820830489859061]"
+                  "repr": "u'/aruco_single/result_mouse_left'"
                 },
-                "x_limits": {
+                "num_gridlines": {
                   "type": "repr",
-                  "repr": "[145.5642386826541, 175.83]"
+                  "repr": "0"
+                },
+                "toolbar_hidden": {
+                  "type": "repr",
+                  "repr": "False"
+                },
+                "zoom1": {
+                  "type": "repr",
+                  "repr": "False"
+                },
+                "dynamic_range": {
+                  "type": "repr",
+                  "repr": "False"
+                },
+                "topic": {
+                  "type": "repr",
+                  "repr": "u'/aruco_single/result'"
+                },
+                "publish_click_location": {
+                  "type": "repr",
+                  "repr": "True"
                 }
               },
               "groups": {}
-            }
-          }
-        },
-        "plugin__MultiplotPlugin__2": {
-          "keys": {},
-          "groups": {
-            "dock_widget__MultiplotWidget": {
-              "keys": {
-                "dockable": {
-                  "type": "repr",
-                  "repr": "u'true'"
-                },
-                "parent": {
-                  "type": "repr",
-                  "repr": "None"
-                },
-                "dock_widget_title": {
-                  "type": "repr",
-                  "repr": "u'Errors'"
-                }
-              },
-              "groups": {}
-            },
-            "plugin": {
-              "keys": {},
-              "groups": {
-                "history": {
-                  "keys": {
-                    "max_length": {
-                      "type": "repr",
-                      "repr": "u'10'"
-                    }
-                  },
-                  "groups": {}
-                }
-              }
             }
           }
         },
@@ -250,7 +382,7 @@
                 },
                 "mouse_pub_topic": {
                   "type": "repr",
-                  "repr": "u'/elfin/camera/image_raw_mouse_left'"
+                  "repr": "u'/image_mouse_left'"
                 },
                 "num_gridlines": {
                   "type": "repr",
@@ -270,11 +402,11 @@
                 },
                 "topic": {
                   "type": "repr",
-                  "repr": "u'/elfin/camera/image_raw'"
+                  "repr": "u'/image'"
                 },
                 "publish_click_location": {
                   "type": "repr",
-                  "repr": "False"
+                  "repr": "True"
                 }
               },
               "groups": {}
@@ -375,14 +507,14 @@
             }
           }
         },
-        "plugin__MultiplotPlugin__1": {
+        "plugin__rqt_plot__Plot__3": {
           "keys": {},
           "groups": {
-            "dock_widget__MultiplotWidget": {
+            "dock_widget__DataPlotWidget": {
               "keys": {
                 "dockable": {
                   "type": "repr",
-                  "repr": "u'true'"
+                  "repr": "True"
                 },
                 "parent": {
                   "type": "repr",
@@ -390,24 +522,35 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'Joint Positions'"
+                  "repr": "u'PyQtGraph (3)'"
                 }
               },
               "groups": {}
             },
             "plugin": {
-              "keys": {},
-              "groups": {
-                "history": {
-                  "keys": {
-                    "max_length": {
-                      "type": "repr",
-                      "repr": "u'10'"
-                    }
-                  },
-                  "groups": {}
+              "keys": {
+                "autoscroll": {
+                  "type": "repr",
+                  "repr": "True"
+                },
+                "plot_type": {
+                  "type": "repr",
+                  "repr": "0"
+                },
+                "topics": {
+                  "type": "repr",
+                  "repr": "[u'/elfin/gravityPD_controller/qd/data[0]', u'/elfin/gravityPD_controller/q/data[0]']"
+                },
+                "y_limits": {
+                  "type": "repr",
+                  "repr": "[-0.028567446885890135, 0.0018820830489859061]"
+                },
+                "x_limits": {
+                  "type": "repr",
+                  "repr": "[145.5642386826541, 175.83]"
                 }
-              }
+              },
+              "groups": {}
             }
           }
         },
@@ -670,6 +813,38 @@
             }
           }
         },
+        "plugin__rqt_rviz__RViz__1": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "rviz_config_file": {
+                  "type": "repr",
+                  "repr": "u''"
+                },
+                "hide_menu": {
+                  "type": "repr",
+                  "repr": "False"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
+        "plugin__rqt_publisher__Publisher__2": {
+          "keys": {},
+          "groups": {
+            "plugin": {
+              "keys": {
+                "publishers": {
+                  "type": "repr",
+                  "repr": "u'[]'"
+                }
+              },
+              "groups": {}
+            }
+          }
+        },
         "plugin__rqt_publisher__Publisher__1": {
           "keys": {},
           "groups": {
@@ -694,51 +869,7 @@
               "keys": {
                 "publishers": {
                   "type": "repr",
-                  "repr": "u\"[{'topic_name': '/elfin/gravityPD_controller/command', 'type_name': 'std_msgs/Float64MultiArray', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/gravityPD_controller/command/data': '[0.0 ,0.0, 120, 0, 0.0,0.0]'}, 'publisher_id': 0, 'counter': 11}]\""
-                }
-              },
-              "groups": {}
-            }
-          }
-        },
-        "plugin__rqt_robot_steering__RobotSteering__1": {
-          "keys": {},
-          "groups": {
-            "plugin": {
-              "keys": {
-                "topic": {
-                  "type": "repr",
-                  "repr": "u'/cmd_vel'"
-                },
-                "vx_min": {
-                  "type": "repr",
-                  "repr": "-1.0"
-                },
-                "vw_min": {
-                  "type": "repr",
-                  "repr": "-3.0"
-                },
-                "vw_max": {
-                  "type": "repr",
-                  "repr": "3.0"
-                },
-                "vx_max": {
-                  "type": "repr",
-                  "repr": "1.0"
-                }
-              },
-              "groups": {}
-            }
-          }
-        },
-        "plugin__rqt_publisher__Publisher__2": {
-          "keys": {},
-          "groups": {
-            "plugin": {
-              "keys": {
-                "publishers": {
-                  "type": "repr",
-                  "repr": "u'[]'"
+                  "repr": "u\"[{'topic_name': '/elfin/gravityPD_controller/command', 'type_name': 'std_msgs/Float64MultiArray', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/gravityPD_controller/command/data': '[0.0 ,0.0, 120, 0, 0.0,0.0]'}, 'publisher_id': 0, 'counter': 33}]\""
                 }
               },
               "groups": {}
@@ -816,38 +947,6 @@
               "groups": {}
             }
           }
-        },
-        "plugin__rqt_rviz__RViz__1": {
-          "keys": {},
-          "groups": {
-            "plugin": {
-              "keys": {
-                "rviz_config_file": {
-                  "type": "repr",
-                  "repr": "u''"
-                },
-                "hide_menu": {
-                  "type": "repr",
-                  "repr": "False"
-                }
-              },
-              "groups": {}
-            }
-          }
-        },
-        "plugin__rqt_shell__Shell__1": {
-          "keys": {},
-          "groups": {
-            "plugin": {
-              "keys": {
-                "shell_type": {
-                  "type": "repr",
-                  "repr": "u'2'"
-                }
-              },
-              "groups": {}
-            }
-          }
         }
       }
     },
@@ -855,13 +954,13 @@
       "keys": {
         "geometry": {
           "type": "repr(QByteArray.hex)",
-          "repr(QByteArray.hex)": "QtCore.QByteArray('01d9d0cb000200000000056f000000c1000008ae000004e90000056f000000ef000008ae000004e900000000000000000a00')",
-          "pretty-print": "     o       o           "
+          "repr(QByteArray.hex)": "QtCore.QByteArray('01d9d0cb00020000000007800000003300000dd200000483000007800000006100000dd20000048300000001000000000780')",
+          "pretty-print": "       3       a         "
         },
         "state": {
           "type": "repr(QByteArray.hex)",
-          "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff00000000fd000000010000000300000340000003c6fc0100000009fb000000b4007200710074005f006a006f0069006e0074005f007400720061006a006500630074006f00720079005f0063006f006e00740072006f006c006c00650072005f005f004a006f0069006e0074005400720061006a006500630074006f007200790043006f006e00740072006f006c006c00650072005f005f0031005f005f004a006f0069006e0074005400720061006a006500630074006f007200790043006f006e00740072006f006c006c006500720055006901000003be000001050000000000000000fc00000000000002850000000000fffffffc0100000002fc00000000000002850000000000fffffffa000000000200000008fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0033005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0038005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0037005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0036005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0035005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0034005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0032005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0031005f005f00440061007400610050006c006f0074005700690064006700650074010000001c000003fe0000000000000000fb00000030005f005f0044006f0063006b0057006900640067006500740043006f006e007400610069006e00650072005f005f0031010000019e000002430000000000000000fc000002ff0000038f0000000000fffffffc0200000002fb00000040007200710074005f007300680065006c006c005f005f005300680065006c006c005f005f0031005f005f005300680065006c006c005700690064006700650074010000001b000000750000000000000000fb00000044007200710074005f00670072006100700068005f005f0052006f007300470072006100700068005f005f0031005f005f0052006f00730047007200610070006800550069010000001b000003b40000000000000000fb00000050007200710074005f006400650070005f005f0052006f0073005000610063006b00470072006100700068005f005f0031005f005f0052006f0073005000610063006b00470072006100700068005500690100000395000002c30000000000000000fb00000058007200710074005f007000750062006c00690073006800650072005f005f005000750062006c00690073006800650072005f005f0032005f005f005000750062006c0069007300680065007200570069006400670065007401000001650000027c0000000000000000fc00000000000003400000027c00fffffffc0200000004fb00000026007200710074005f007200760069007a005f005f005200560069007a005f005f0031005f005f010000001c000003100000000000000000fb0000005a007200710074005f0069006d006100670065005f0076006900650077005f005f0049006d0061006700650056006900650077005f005f0031005f005f0049006d0061006700650056006900650077005700690064006700650074010000001c000002fd0000005400fffffffb00000058007200710074005f007000750062006c00690073006800650072005f005f005000750062006c00690073006800650072005f005f0031005f005f005000750062006c00690073006800650072005700690064006700650074010000031f000000c30000009800fffffffb0000006c007200710074005f007200650063006f006e006600690067007500720065005f005f0050006100720061006d005f005f0031005f005f005f0070006c007500670069006e0063006f006e007400610069006e00650072005f0074006f0070005f0077006900640067006500740100000270000001720000000000000000fc000003d40000038a0000000000fffffffa000000000200000002fb00000046004d0075006c007400690070006c006f00740050006c007500670069006e005f005f0032005f005f004d0075006c007400690070006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000046004d0075006c007400690070006c006f00740050006c007500670069006e005f005f0031005f005f004d0075006c007400690070006c006f0074005700690064006700650074010000001c000003bd0000000000000000fb00000050007200710074005f0061006300740069006f006e005f005f0041006300740069006f006e0050006c007500670069006e005f005f0031005f005f006d0065007300730061006700650073002e007500690100000282000002650000000000000000fb0000006a007200710074005f0072006f0062006f0074005f007300740065006500720069006e0067005f005f0052006f0062006f0074005300740065006500720069006e0067005f005f0031005f005f0052006f0062006f0074005300740065006500720069006e00670055006901000003ec000000fb0000000000000000000003400000000000000004000000040000000800000008fc00000001000000030000000100000036004d0069006e0069006d0069007a006500640044006f0063006b00570069006400670065007400730054006f006f006c0062006100720000000000ffffffff0000000000000000')",
-          "pretty-print": "                  rqt_joint_trajectory_controller__JointTrajectoryController__1__JointTrajectoryControllerUi                                   Brqt_plot__Plot__3__DataPlotWidget          Brqt_plot__Plot__8__DataPlotWidget          Brqt_plot__Plot__7__DataPlotWidget          Brqt_plot__Plot__6__DataPlotWidget          Brqt_plot__Plot__5__DataPlotWidget          Brqt_plot__Plot__4__DataPlotWidget          Brqt_plot__Plot__2__DataPlotWidget          Brqt_plot__Plot__1__DataPlotWidget          0__DockWidgetContainer__1                                                          u                                                                                                                                                    e |                 &rqt_rviz__RViz__1__          Zrqt_image_view__ImageView__1__ImageViewWidget          Xrqt_publisher__Publisher__1__PublisherWidget          lrqt_reconfigure__Param__1___plugincontainer_top_widget                                                                                                                                                                e                                                                     @                                                      "
+          "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff00000000fd000000010000000300000653000003eefc010000000bfb000000b4007200710074005f006a006f0069006e0074005f007400720061006a006500630074006f00720079005f0063006f006e00740072006f006c006c00650072005f005f004a006f0069006e0074005400720061006a006500630074006f007200790043006f006e00740072006f006c006c00650072005f005f0031005f005f004a006f0069006e0074005400720061006a006500630074006f007200790043006f006e00740072006f006c006c006500720055006901000003be000001050000000000000000fc00000000000002850000000000fffffffc0100000002fc00000000000002850000000000fffffffa000000000200000008fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0033005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0038005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0037005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0036005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0035005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0034005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0032005f005f00440061007400610050006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000042007200710074005f0070006c006f0074005f005f0050006c006f0074005f005f0031005f005f00440061007400610050006c006f0074005700690064006700650074010000001c000003fe0000000000000000fb00000030005f005f0044006f0063006b0057006900640067006500740043006f006e007400610069006e00650072005f005f0031010000019e000002430000000000000000fc000002ff0000038f0000000000fffffffc0200000002fb00000040007200710074005f007300680065006c006c005f005f005300680065006c006c005f005f0031005f005f005300680065006c006c005700690064006700650074010000001b000000750000000000000000fb00000044007200710074005f00670072006100700068005f005f0052006f007300470072006100700068005f005f0031005f005f0052006f00730047007200610070006800550069010000001b000003b40000000000000000fb00000050007200710074005f006400650070005f005f0052006f0073005000610063006b00470072006100700068005f005f0031005f005f0052006f0073005000610063006b00470072006100700068005500690100000395000002c30000000000000000fb00000058007200710074005f007000750062006c00690073006800650072005f005f005000750062006c00690073006800650072005f005f0032005f005f005000750062006c0069007300680065007200570069006400670065007401000001650000027c0000000000000000fc000000000000027c0000027c00fffffffc0200000004fb00000026007200710074005f007200760069007a005f005f005200560069007a005f005f0031005f005f010000001c000003100000000000000000fb0000005a007200710074005f0069006d006100670065005f0076006900650077005f005f0049006d0061006700650056006900650077005f005f0031005f005f0049006d0061006700650056006900650077005700690064006700650074010000001c000002650000005400fffffffb00000058007200710074005f007000750062006c00690073006800650072005f005f005000750062006c00690073006800650072005f005f0031005f005f005000750062006c006900730068006500720057006900640067006500740100000287000001830000009800fffffffb0000006c007200710074005f007200650063006f006e006600690067007500720065005f005f0050006100720061006d005f005f0031005f005f005f0070006c007500670069006e0063006f006e007400610069006e00650072005f0074006f0070005f0077006900640067006500740100000270000001720000000000000000fc000003d40000038a0000000000fffffffa000000000200000002fb00000046004d0075006c007400690070006c006f00740050006c007500670069006e005f005f0032005f005f004d0075006c007400690070006c006f00740057006900640067006500740100000000ffffffff0000000000000000fb00000046004d0075006c007400690070006c006f00740050006c007500670069006e005f005f0031005f005f004d0075006c007400690070006c006f0074005700690064006700650074010000001c000003bd0000000000000000fb00000050007200710074005f0061006300740069006f006e005f005f0041006300740069006f006e0050006c007500670069006e005f005f0031005f005f006d0065007300730061006700650073002e007500690100000282000002650000000000000000fb0000006a007200710074005f0072006f0062006f0074005f007300740065006500720069006e0067005f005f0052006f0062006f0074005300740065006500720069006e0067005f005f0031005f005f0052006f0062006f0074005300740065006500720069006e00670055006901000003ec000000fb0000000000000000fb0000005a007200710074005f0069006d006100670065005f0076006900650077005f005f0049006d0061006700650056006900650077005f005f0032005f005f0049006d00610067006500560069006500770057006900640067006500740100000282000001a7000001a700fffffffb0000004c007200710074005f0074006f007000690063005f005f0054006f0070006900630050006c007500670069006e005f005f0031005f005f0054006f007000690063005700690064006700650074010000042f00000224000000d400ffffff000006530000000000000004000000040000000800000008fc00000001000000030000000100000036004d0069006e0069006d0069007a006500640044006f0063006b00570069006400670065007400730054006f006f006c0062006100720000000000ffffffff0000000000000000')",
+          "pretty-print": "                  rqt_joint_trajectory_controller__JointTrajectoryController__1__JointTrajectoryControllerUi                                   Brqt_plot__Plot__3__DataPlotWidget          Brqt_plot__Plot__8__DataPlotWidget          Brqt_plot__Plot__7__DataPlotWidget          Brqt_plot__Plot__6__DataPlotWidget          Brqt_plot__Plot__5__DataPlotWidget          Brqt_plot__Plot__4__DataPlotWidget          Brqt_plot__Plot__2__DataPlotWidget          Brqt_plot__Plot__1__DataPlotWidget          0__DockWidgetContainer__1                                                          u                                                                                                                                                    e |                 &rqt_rviz__RViz__1__          Zrqt_image_view__ImageView__1__ImageViewWidget          Xrqt_publisher__Publisher__1__PublisherWidget          lrqt_reconfigure__Param__1___plugincontainer_top_widget                                                                                                                                                                e                                                                                                                                                                      / $     S                                                      "
         }
       },
       "groups": {
