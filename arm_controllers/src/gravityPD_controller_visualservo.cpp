@@ -178,8 +178,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
         /////////////////////////////////////////////////////////////////////////
 
-
-
         // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
@@ -197,7 +195,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         sub = n.subscribe("command", 1000, &GravityPD_Controller_VisualServo::commandCB, this);
         
         //Visual servo camera subscriber
-        cam_sub = n.subscribe("aruco_single/pose", 1000, &GravityPD_Controller_VisualServo::camPoseCB, this);
+        cam_sub = n.subscribe("/aruco_single/pose", 1000, &GravityPD_Controller_VisualServo::camPoseCB, this);
         
         
         return true;
@@ -221,8 +219,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
     void camPoseCB(const geometry_msgs::PoseStamped &msg)
     {
-        
-    
+
     }
 
     void starting(const ros::Time &time)
@@ -291,13 +288,13 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             joints_[i].setCommand(tau_d_(i));
         }
 
-        if (loop_count_ % 100 == 0)
+        if (loop_count_ % 10 == 0)
         {
             // ********* 3. data 저장 *********
             save_data();
 
             // ********* 4. state 출력 *********
-            print_state();
+            //print_state();
         }
         loop_count_++;
     }
