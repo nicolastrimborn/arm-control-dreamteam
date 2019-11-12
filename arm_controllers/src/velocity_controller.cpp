@@ -59,41 +59,6 @@ class Velocity_Controller : public controller_interface::Controller<hardware_int
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
 
-        // std::vector<double> Kp(n_joints_), Ki(n_joints_), Kd(n_joints_);
-        // for (size_t i = 0; i < n_joints_; i++)
-        // {
-        //     std::string si = boost::lexical_cast<std::string>(i + 1);
-        //     if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/p", Kp[i]))
-        //     {
-        //         Kp_(i) = Kp[i];
-        //     }
-        //     else
-        //     {
-        //         std::cout << "/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/p" << std::endl;
-        //         ROS_ERROR("Cannot find pid/p gain");
-        //         return false;
-        //     }
-
-        //     if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/i", Ki[i]))
-        //     {
-        //         Ki_(i) = Ki[i];
-        //     }
-        //     else
-        //     {
-        //         ROS_ERROR("Cannot find pid/i gain");
-        //         return false;
-        //     }
-
-        //     if (n.getParam("/elfin/velocity_controller/gains/elfin_joint" + si + "/pid/d", Kd[i]))
-        //     {
-        //         Kd_(i) = Kd[i];
-        //     }
-        //     else
-        //     {
-        //         ROS_ERROR("Cannot find pid/d gain");
-        //         return false;
-        //     }
-        // }
 
         // 2. ********* urdf *********
         urdf::Model urdf;

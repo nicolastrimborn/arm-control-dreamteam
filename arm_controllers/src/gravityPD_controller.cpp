@@ -186,6 +186,12 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         // ********* 5. 각종 변수 초기화 *********
 
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
+
+        xd_.p(0) = 0;
+        xd_.p(1) = 0;
+        xd_.p(2) = 0.2;
+        xd_.M = KDL::Rotation(KDL::Rotation::RPY(0, 0, 180*KDL::deg2rad);
+
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
 
         qd_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -244,12 +250,9 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
             ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
             return;
         }
-        else
+        for (int i = 0; i < num_taskspace; i++)
         {
-            for (size_t i = 0; i < n_joints_; i++)
-            {
-                qd_(i) = msg->data[i]*KDL::deg2rad;
-            }
+            x_est_(i) = msg->data[i];
         }
     }
 
@@ -282,6 +285,7 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         }
 
         // ********* 1. Desired Trajecoty in Joint Space *********
+
 
         // ********* 2. Motion Controller in Joint Space*********
         // *** 2.1 Error Definition in Joint Space ***
@@ -510,6 +514,20 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
     KDL::JntArray aux_d_;
     KDL::JntArray comp_d_;
     KDL::JntArray tau_d_;
+
+    // Task Space State
+        // States
+    KDL::JntArray x_est_;
+    // ver. 01
+    KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
+    KDL::Frame x_;
+    KDL::Twist ex_temp_;
+
+    // KDL::Twist xd_dot_, xd_ddot_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_;
+    Eigen::Matrix<double, num_taskspace, 1> xd_dot_, xd_ddot_;
+    Eigen::Matrix<double, num_taskspace, 1> xdot_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_dot_, ex_int_, sum_e, blah;
 
     // gains
     KDL::JntArray Kp_, Ki_, Kd_;
