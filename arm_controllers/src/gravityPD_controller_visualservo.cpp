@@ -4,6 +4,7 @@
 #include <control_toolbox/pid.h>
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <geometry_msgs/PoseStamped.h>
 
 #include <urdf/model.h>
 
@@ -194,6 +195,11 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
         // 6.2 subsriber
         sub = n.subscribe("command", 1000, &GravityPD_Controller_VisualServo::commandCB, this);
+        
+        //Visual servo camera subscriber
+        cam_sub = n.subscribe("aruco_single/pose", 1000, &GravityPD_Controller_VisualServo::camPoseCB, this);
+        
+        
         return true;
     }
 
@@ -211,6 +217,12 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
                 qd_(i) = msg->data[i]*KDL::deg2rad;
             }
         }
+    }
+
+    void camPoseCB(const geometry_msgs::PoseStamped &msg)
+    {
+        
+    
     }
 
     void starting(const ros::Time &time)
@@ -436,7 +448,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         count++;
     }
 
-  private:
+private:
     // others
     double t;
     int loop_count_;
@@ -484,6 +496,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
     // ros subsciber
     ros::Subscriber sub;
+    ros::Subscriber cam_sub;
 
     // ros message
     std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;
