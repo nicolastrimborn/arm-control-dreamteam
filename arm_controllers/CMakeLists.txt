@@ -45,7 +45,6 @@ add_library(${PROJECT_NAME}
   src/velocity_controller.cpp
   src/kinematic_controller.cpp
   src/gravityPD_controller.cpp
-  src/gravityPD_controller_visualservo.cpp
   src/inverse_dynamics_task_space.cpp
 )
 
