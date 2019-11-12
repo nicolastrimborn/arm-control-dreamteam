@@ -34,6 +34,15 @@
 
   <!-- camera -->
   <gazebo reference="camera_link">
+    <visual name='visual'>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Red</name>
+          </script>
+        </material>
+    </visual>
+
     <sensor type="camera" name="camera">
       <update_rate>30.0</update_rate>
       <camera name="head">

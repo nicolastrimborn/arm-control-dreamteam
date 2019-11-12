@@ -60,4 +60,10 @@
     </description>
   </class>
 
+  <class name="arm_controllers/GravityPD_Controller_VisualServo" type="arm_controllers::GravityPD_Controller_VisualServo" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Gravity PD Visual servo Controller
+    </description>
+  </class>
+
 </library>
