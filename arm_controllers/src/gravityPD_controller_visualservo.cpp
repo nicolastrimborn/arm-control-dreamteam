@@ -5,8 +5,11 @@
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <geometry_msgs/PoseStamped.h>
-
+#include <kdl/chainjnttojacsolver.hpp>        // jacobian
 #include <urdf/model.h>
+#include "geometry_msgs/Vector3.h"
+#include "geometry_msgs/Quaternion.h"
+#include "tf/transform_datatypes.h"
 
 // from kdl packages
 #include <kdl/tree.hpp>
@@ -22,6 +25,7 @@
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
 #define SaveDataMax 49
+#define num_taskspace 6
 
 namespace arm_controllers
 {
@@ -203,16 +207,16 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
     void commandCB(const std_msgs::Float64MultiArrayConstPtr &msg)
     {
-        if (msg->data.size() != n_joints_)
+        if (msg->data.size() != num_taskspace)
         {
             ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
             return;
         }
         else
         {
-            for (size_t i = 0; i < n_joints_; i++)
+            for (size_t i = 0; i < num_taskspace; i++)
             {
-                qd_(i) = msg->data[i]*KDL::deg2rad;
+                x_cmd_(i) = msg->data[i];
             }
         }
     }
@@ -256,13 +260,40 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             qdot_(i) = joints_[i].getVelocity();
         }
 
-        // ********* 1. Desired Trajecoty in Joint Space *********
+        // 0.3 end-effector state by Compute forward kinematics (x_,xdot_)
+        xdot_ = J_.data * qdot_.data;
+
+        // ********* 1. Desired Trajecoty in Task Space *********
+        x_co_.p(0) = x_est_(0);
+        x_co_.p(1) = x_est_(1);
+        x_co_.p(2) = x_est_(2);
+
+        quat = tf::Quaternion(x_est_(3), x_est_(4), x_est_(5), x_est_(6));
+        tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+        x_co_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
+
+        // ********* 1. Desired Trajecoty in Task Space *********
+        xd_.p(0) = x_cmd_(0);
+        xd_.p(1) = x_cmd_(1);
+        xd_.p(2) = x_cmd_(2);
+        xd_.M = KDL::Rotation(KDL::Rotation::RPY(x_cmd_(3), x_cmd_(4), x_cmd_(5)));
 
         // ********* 2. Motion Controller in Joint Space*********
-        // *** 2.1 Error Definition in Joint Space ***
-        e_.data = qd_.data - q_.data;
-        e_dot_.data = qd_dot_.data - qdot_.data;
-        e_int_.data = qd_.data - q_.data; // (To do: e_int 업데이트 필요요)
+        // *** 2.0 Error Definition in Task Space ***
+        ex_temp_ = diff(x_co_, xd_);
+
+        ex_(0) = ex_temp_(0);
+        ex_(1) = ex_temp_(1);
+        ex_(2) = ex_temp_(2);
+        ex_(3) = ex_temp_(3);
+        ex_(4) = ex_temp_(4);
+        ex_(5) = ex_temp_(5);
+
+        // *** 2.1 computing Jacobian J(q) ***
+        jnt_to_jac_solver_->JntToJac(q_, J_);
+
+        // *** 2.2 computing Jacobian transpose/inversion ***
+        J_transpose_ = J_.data.transpose();
 
         // *** 2.2 Compute model(M,C,G) ***
         id_solver_->JntToMass(q_, M_);
@@ -270,8 +301,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         id_solver_->JntToGravity(q_, G_); 
 
         // *** 2.3 Apply Torque Command to Actuator ***
-        // PD control + gravity compensation
-        // tau_d_.data = G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
 
         // ISHIRA: Manipulation
         for (int i = 0; i < n_joints_; i++)
@@ -280,14 +309,9 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             Kd_(i) = pids_[i].getGains().d_gain_;
             Ki_(i) = pids_[i].getGains().i_gain_;
         }
-        
-        // for (int i = 0; i < n_joints_; i++)
-        // {
-        //     tau_d_.data[i] = G_.data[i] + pids_[i].computeCommand(e_.data[i], e_dot_.data[i], period);
-        //     joints_[i].setCommand(tau_d_(i));
-        // }
 
-        tau_d_.data = G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
+        aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(ex_)-Kd_.data.cwiseProduct(xdot_));
+        tau_d_.data = aux_d_.data + G_.data;
 
         for (int i = 0; i < n_joints_; i++)
         {
@@ -472,17 +496,39 @@ private:
     KDL::JntArray G_;              // gravity torque vector
     KDL::Vector gravity_;
 
+    // kdl and Eigen Jacobian
+    KDL::Jacobian J_;
+    Eigen::MatrixXd Jdot_;
+    Eigen::MatrixXd J_inv_;
+    Eigen::Matrix<double, num_taskspace, num_taskspace> J_transpose_;
+
     // kdl solver
+    boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_; //Solver to compute the jacobian
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
 
     // Input
-    KDL::JntArray x_est_;
+    KDL::JntArray x_est_, marker_pose;
 
     // Joint Space State
     KDL::JntArray qd_, qd_dot_, qd_ddot_;
     KDL::JntArray qd_old_;
     KDL::JntArray q_, qdot_;
     KDL::JntArray e_, e_dot_, e_int_;
+
+    // Task Space State
+    // ver. 01
+    KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
+    KDL::Frame x_, x_co_;
+    KDL::Twist ex_temp_;
+
+    // KDL::Twist xd_dot_, xd_ddot_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_;
+    Eigen::Matrix<double, num_taskspace, 1> xd_dot_, xd_ddot_;
+    Eigen::Matrix<double, num_taskspace, 1> xdot_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_dot_, ex_int_, sum_e, blah;
+
+    // Input
+    KDL::JntArray x_cmd_;
 
     // Input
     KDL::JntArray aux_d_;
@@ -507,6 +553,11 @@ private:
     // ros message
     std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;
     std_msgs::Float64MultiArray msg_SaveData_;
+
+
+    // the tf::Quaternion has a method to acess roll pitch and yaw
+    tf::Quaternion quat;
+    double roll, pitch, yaw;
 };
 }; // namespace arm_controllers
 PLUGINLIB_EXPORT_CLASS(arm_controllers::GravityPD_Controller_VisualServo, controller_interface::ControllerBase)
