@@ -148,23 +148,36 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
         id_solver_.reset(new KDL::ChainDynParam(kdl_chain_, gravity_));
 
+        // 4.4 jacobian solver 초기화
+        jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
+
         // ********* 5. 각종 변수 초기화 *********
 
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
 
-        qd_.data = Eigen::VectorXd::Zero(n_joints_);
-        qd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
-        qd_ddot_.data = Eigen::VectorXd::Zero(n_joints_);
-        qd_old_.data = Eigen::VectorXd::Zero(n_joints_);
-
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
 
-        e_.data = Eigen::VectorXd::Zero(n_joints_);
-        e_dot_.data = Eigen::VectorXd::Zero(n_joints_);
-        e_int_.data = Eigen::VectorXd::Zero(n_joints_);
+        x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
+        x_cmd_.data(0) = 0.0;
+        x_cmd_.data(1) = -0.32;
+        x_cmd_.data(2) = 0.5;
 
+        x_est_.data = Eigen::VectorXd::Zero(num_taskspace);
+
+        for (size_t i = 0; i < num_taskspace; i++)
+        {
+            ex_(i) = 0;
+        }
+
+        marker_pose.data = Eigen::VectorXd::Zero(num_taskspace);
+        marker_pose.data(0) = 0.0;
+        marker_pose.data(1) = 0.0;
+        marker_pose.data(2) = 1.5;
+        marker_pose.data(3) = 0;
+        marker_pose.data(4) = PI;
+        marker_pose.data(5) = 0;
 
          // PIDS////////////////////////////////////////////////////////////////
 
@@ -183,6 +196,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         /////////////////////////////////////////////////////////////////////////
 
         // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
+        J_.resize(kdl_chain_.getNrOfJoints());
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
@@ -190,9 +204,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
         // ********* 6. ROS 명령어 *********
         // 6.1 publisher
-        pub_qd_ = n.advertise<std_msgs::Float64MultiArray>("qd", 1000);
         pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
-        pub_e_ = n.advertise<std_msgs::Float64MultiArray>("e", 1000);
 
         pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
         // 6.2 subsriber
@@ -200,7 +212,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         
         //Visual servo camera subscriber
         cam_sub = n.subscribe("/aruco_single/pose", 1000, &GravityPD_Controller_VisualServo::camPoseCB, this);
-        
+
         
         return true;
     }
@@ -223,13 +235,13 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
     void camPoseCB(const geometry_msgs::PoseStamped &msg)
     {
-             x_est_(0) = msg.pose.position.x;
-             x_est_(1) = msg.pose.position.y;
-             x_est_(2) = msg.pose.position.z;
-             x_est_(3) = msg.pose.orientation.x;
-             x_est_(4) = msg.pose.orientation.y;
-             x_est_(5) = msg.pose.orientation.z;
-             x_est_(6) = msg.pose.orientation.w;
+        x_est_(0) = msg.pose.position.x;
+        x_est_(1) = msg.pose.position.y;
+        x_est_(2) = msg.pose.position.z;
+        x_est_(3) = msg.pose.orientation.x;
+        x_est_(4) = msg.pose.orientation.y;
+        x_est_(5) = msg.pose.orientation.z;
+        x_est_(6) = msg.pose.orientation.w;
     }
 
     void starting(const ros::Time &time)
@@ -249,9 +261,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
     void update(const ros::Time &time, const ros::Duration &period)
     {
         // ********* 0. Get states from gazebo *********
-        // 0.1 sampling time
-        double dt = period.toSec();
-        t = t + 0.001;
 
         // 0.2 joint state
         for (int i = 0; i < n_joints_; i++)
@@ -261,16 +270,16 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         }
 
         // 0.3 end-effector state by Compute forward kinematics (x_,xdot_)
-        xdot_ = J_.data * qdot_.data;
 
         // ********* 1. Desired Trajecoty in Task Space *********
-        x_co_.p(0) = x_est_(0);
-        x_co_.p(1) = x_est_(1);
-        x_co_.p(2) = x_est_(2);
+        x_co_.p(0) = x_est_(0)+marker_pose.data(0);
+        x_co_.p(1) = x_est_(1)+marker_pose(1);
+        x_co_.p(2) = x_est_(2)+marker_pose(2);
 
         quat = tf::Quaternion(x_est_(3), x_est_(4), x_est_(5), x_est_(6));
         tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
-        x_co_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
+
+        x_co_.M = KDL::Rotation(KDL::Rotation::RPY(roll+marker_pose(3), pitch+marker_pose(4), yaw+marker_pose(5)));
 
         // ********* 1. Desired Trajecoty in Task Space *********
         xd_.p(0) = x_cmd_(0);
@@ -292,13 +301,15 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         // *** 2.1 computing Jacobian J(q) ***
         jnt_to_jac_solver_->JntToJac(q_, J_);
 
+        xdot_ = J_.data * qdot_.data;
+
         // *** 2.2 computing Jacobian transpose/inversion ***
         J_transpose_ = J_.data.transpose();
 
         // *** 2.2 Compute model(M,C,G) ***
         id_solver_->JntToMass(q_, M_);
         id_solver_->JntToCoriolis(q_, qdot_, C_);
-        id_solver_->JntToGravity(q_, G_); 
+        id_solver_->JntToGravity(q_, G_);
 
         // *** 2.3 Apply Torque Command to Actuator ***
 
@@ -339,30 +350,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         // Simulation time (unit: sec)
         SaveData_[0] = t;
 
-        // Desired position in joint space (unit: rad)
-        SaveData_[1] = qd_(0);
-        SaveData_[2] = qd_(1);
-        SaveData_[3] = qd_(2);
-        SaveData_[4] = qd_(3);
-        SaveData_[5] = qd_(4);
-        SaveData_[6] = qd_(5);
-
-        // Desired velocity in joint space (unit: rad/s)
-        SaveData_[7] = qd_dot_(0);
-        SaveData_[8] = qd_dot_(1);
-        SaveData_[9] = qd_dot_(2);
-        SaveData_[10] = qd_dot_(3);
-        SaveData_[11] = qd_dot_(4);
-        SaveData_[12] = qd_dot_(5);
-
-        // Desired acceleration in joint space (unit: rad/s^2)
-        SaveData_[13] = qd_ddot_(0);
-        SaveData_[14] = qd_ddot_(1);
-        SaveData_[15] = qd_ddot_(2);
-        SaveData_[16] = qd_ddot_(3);
-        SaveData_[17] = qd_ddot_(4);
-        SaveData_[18] = qd_ddot_(5);
-
         // Actual position in joint space (unit: rad)
         SaveData_[19] = q_(0);
         SaveData_[20] = q_(1);
@@ -379,30 +366,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         SaveData_[29] = qdot_(4);
         SaveData_[30] = qdot_(5);
 
-        // Error position in joint space (unit: rad)
-        SaveData_[31] = e_(0);
-        SaveData_[32] = e_(1);
-        SaveData_[33] = e_(2);
-        SaveData_[34] = e_(3);
-        SaveData_[35] = e_(4);
-        SaveData_[36] = e_(5);
-
-        // Error velocity in joint space (unit: rad/s)
-        SaveData_[37] = e_dot_(0);
-        SaveData_[38] = e_dot_(1);
-        SaveData_[39] = e_dot_(3);
-        SaveData_[40] = e_dot_(4);
-        SaveData_[41] = e_dot_(5);
-        SaveData_[42] = e_dot_(6);
-
-        // Error intergal value in joint space (unit: rad*sec)
-        SaveData_[43] = e_int_(0);
-        SaveData_[44] = e_int_(1);
-        SaveData_[45] = e_int_(2);
-        SaveData_[46] = e_int_(3);
-        SaveData_[47] = e_int_(4);
-        SaveData_[48] = e_int_(5);
-
         // 2
         msg_qd_.data.clear();
         msg_q_.data.clear();
@@ -413,9 +376,8 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         // 3
         for (int i = 0; i < n_joints_; i++)
         {
-            msg_qd_.data.push_back(qd_(i));
             msg_q_.data.push_back(q_(i));
-            msg_e_.data.push_back(e_(i));
+
         }
 
         for (int i = 0; i < SaveDataMax; i++)
@@ -424,9 +386,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         }
 
         // 4
-        pub_qd_.publish(msg_qd_);
         pub_q_.publish(msg_q_);
-        pub_e_.publish(msg_e_);
 
         pub_SaveData_.publish(msg_SaveData_);
     }
@@ -441,15 +401,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             printf("t = %f\n", t);
             printf("\n");
 
-            printf("*** Desired State in Joint Space (unit: deg) ***\n");
-            printf("qd_(0): %f, ", qd_(0)*R2D);
-            printf("qd_(1): %f, ", qd_(1)*R2D);
-            printf("qd_(2): %f, ", qd_(2)*R2D);
-            printf("qd_(3): %f, ", qd_(3)*R2D);
-            printf("qd_(4): %f, ", qd_(4)*R2D);
-            printf("qd_(5): %f\n", qd_(5)*R2D);
-            printf("\n");
-
             printf("*** Actual State in Joint Space (unit: deg) ***\n");
             printf("q_(0): %f, ", q_(0) * R2D);
             printf("q_(1): %f, ", q_(1) * R2D);
@@ -458,18 +409,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             printf("q_(4): %f, ", q_(4) * R2D);
             printf("q_(5): %f\n", q_(5) * R2D);
             printf("\n");
-
-
-            printf("*** Joint Space Error (unit: deg)  ***\n");
-            printf("%f, ", R2D * e_(0));
-            printf("%f, ", R2D * e_(1));
-            printf("%f, ", R2D * e_(2));
-            printf("%f, ", R2D * e_(3));
-            printf("%f, ", R2D * e_(4));
-            printf("%f\n", R2D * e_(5));
-            printf("\n");
-
-
             count = 0;
         }
         count++;
@@ -498,8 +437,6 @@ private:
 
     // kdl and Eigen Jacobian
     KDL::Jacobian J_;
-    Eigen::MatrixXd Jdot_;
-    Eigen::MatrixXd J_inv_;
     Eigen::Matrix<double, num_taskspace, num_taskspace> J_transpose_;
 
     // kdl solver
@@ -510,29 +447,23 @@ private:
     KDL::JntArray x_est_, marker_pose;
 
     // Joint Space State
-    KDL::JntArray qd_, qd_dot_, qd_ddot_;
-    KDL::JntArray qd_old_;
     KDL::JntArray q_, qdot_;
-    KDL::JntArray e_, e_dot_, e_int_;
 
     // Task Space State
     // ver. 01
     KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
-    KDL::Frame x_, x_co_;
+    KDL::Frame x_co_;
     KDL::Twist ex_temp_;
 
     // KDL::Twist xd_dot_, xd_ddot_;
     Eigen::Matrix<double, num_taskspace, 1> ex_;
-    Eigen::Matrix<double, num_taskspace, 1> xd_dot_, xd_ddot_;
     Eigen::Matrix<double, num_taskspace, 1> xdot_;
-    Eigen::Matrix<double, num_taskspace, 1> ex_dot_, ex_int_, sum_e, blah;
 
     // Input
     KDL::JntArray x_cmd_;
 
     // Input
     KDL::JntArray aux_d_;
-    KDL::JntArray comp_d_;
     KDL::JntArray tau_d_;
 
     // gains
@@ -543,7 +474,7 @@ private:
     double SaveData_[SaveDataMax];
 
     // ros publisher
-    ros::Publisher pub_qd_, pub_q_, pub_e_;
+    ros::Publisher pub_q_;
     ros::Publisher pub_SaveData_;
 
     // ros subsciber
