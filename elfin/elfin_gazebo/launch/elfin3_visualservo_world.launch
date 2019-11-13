@@ -14,8 +14,6 @@
   <!-- Spaw Fiducials -->
   <arg name="path" default="$(find elfin_markers)/markers/aruco_visual_marker_5/model.sdf" />
   <node name="urdf_spawner3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" 
-        args="-sdf -model -file $(arg path) -x 0.7 -z 0.12 -P -1.05"/> 
-  <node name="urdf_spawner4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
-        args="-sdf -model -file $(arg path) -z 1.5 -P 3.141"/> 
+        args="-sdf -model -file $(arg path) -x 0.7 -z 0.12 -P -1.05"/>
 
 </launch>
