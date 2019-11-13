@@ -1,9 +1,11 @@
 <launch>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch"/>
-  <param name="robot_description" command="$(find xacro)/xacro.py --inorder '$(find elfin_description)/urdf/elfin3.urdf_visualservo.xacro'" />
+  <param name="robot_description" command="$(find xacro)/xacro.py --inorder 
+              '$(find elfin_description)/urdf/elfin3.urdf_visualservo.xacro'" />
 
-  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -model elfin3 -param robot_description"/>
+  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" 
+        args="-urdf -model elfin3 -param robot_description"/>
   <!--
   <param name="robot_description1" command="$(find xacro)/xacro.py -inorder '$(find elfin_description)/urdf/box.urdf.xacro'" />
   <node name="urdf_spawner2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -model box -param robot_description1"/> 
@@ -11,7 +13,9 @@
 
   <!-- Spaw Fiducials -->
   <arg name="path" default="$(find elfin_markers)/markers/aruco_visual_marker_5/model.sdf" />
-  <node name="urdf_spawner3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-sdf -model -file $(arg path) -x 0.7 -z 0.12 -P -1.05"/> 
-  <node name="urdf_spawner4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-sdf -model -file $(arg path) -z 1.3 -P 3.141"/> 
+  <node name="urdf_spawner3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" 
+        args="-sdf -model -file $(arg path) -x 0.7 -z 0.12 -P -1.05"/> 
+  <node name="urdf_spawner4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+        args="-sdf -model -file $(arg path) -z 1.5 -P 3.141"/> 
 
 </launch>
