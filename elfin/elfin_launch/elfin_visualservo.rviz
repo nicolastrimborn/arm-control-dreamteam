@@ -10,7 +10,6 @@ Panels:
         - /RobotModel1/Links1
         - /RobotModel1/Links1/camera_link1
         - /Marker1
-        - /Marker1/Status1
         - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.822680414
@@ -130,7 +129,7 @@ Visualization Manager:
       Marker Topic: /aruco_single/marker
       Name: Marker
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/TF
@@ -138,8 +137,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        aruco_marker_frame:
-          Value: true
         camera_link:
           Value: true
         elfin_base:
@@ -160,9 +157,7 @@ Visualization Manager:
           Value: false
         elfin_link6:
           Value: false
-        stereo_gazebo_left__camera_optical_frame:
-          Value: false
-        stereo_gazebo_left_camera_optical_frame:
+        hand_eye//elfin_camera/aruco_marker_frame:
           Value: true
         world:
           Value: true
@@ -183,11 +178,9 @@ Visualization Manager:
                         elfin_link6:
                           elfin_end_link:
                             camera_link:
-                              stereo_gazebo_left__camera_optical_frame:
-                                {}
-                              stereo_gazebo_left_camera_optical_frame:
-                                aruco_marker_frame:
-                                  {}
+                              {}
+            hand_eye//elfin_camera/aruco_marker_frame:
+              {}
       Update Interval: 0
       Value: true
   Enabled: true
@@ -215,7 +208,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.53920627
+      Distance: 1.63341451
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -230,10 +223,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.730398118
+      Pitch: 0.255398214
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.09039605
+      Yaw: 0.970395207
     Saved: ~
 Window Geometry:
   Displays:
