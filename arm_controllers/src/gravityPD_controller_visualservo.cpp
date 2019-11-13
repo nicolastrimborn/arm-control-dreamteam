@@ -161,8 +161,8 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
         x_cmd_.data(0) = 0.0;
-        x_cmd_.data(1) = -0.32;
-        x_cmd_.data(2) = 0.5;
+        x_cmd_.data(1) = 0.0;
+        x_cmd_.data(2) = 0.88;
 
         x_est_.data = Eigen::VectorXd::Zero(num_taskspace);
 

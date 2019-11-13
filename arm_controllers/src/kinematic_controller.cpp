@@ -207,8 +207,8 @@ class Kinematic_Controller : public controller_interface::Controller<hardware_in
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
         x_cmd_(0) = 0.0;
-        x_cmd_(1) = -0.32;
-        x_cmd_(2) = 0.56;
+        x_cmd_(1) = 0.0;
+        x_cmd_(2) = 0.8875;
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
         qC_dot_.data = Eigen::VectorXd::Zero(n_joints_);
