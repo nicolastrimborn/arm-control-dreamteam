@@ -435,8 +435,8 @@
 
   <joint name="camera_joint" type="fixed">
     <axis xyz="0 0 0" />
-    <origin xyz="0 0 0" rpy="0 ${-PI/2} 0"/>
-    <parent link="elfin_end_link"/>
+    <origin xyz="0 -0.079 0" rpy="${PI} 0 -${PI/2}"/>
+    <parent link="elfin_link6"/>
     <child link="camera_link"/>
   </joint>
 
@@ -452,7 +452,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-    <box size="${camera_link} ${camera_link} ${camera_link}"/>
+    <box size="0.002 ${camera_link}  ${camera_link} "/>
       </geometry>
       <material name="red"/>
     </visual>

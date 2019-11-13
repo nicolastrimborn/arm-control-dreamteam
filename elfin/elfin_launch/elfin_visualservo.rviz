@@ -156,8 +156,6 @@ Visualization Manager:
         elfin_link5:
           Value: false
         elfin_link6:
-          Value: false
-        hand_eye//elfin_camera/aruco_marker_frame:
           Value: true
         world:
           Value: true
@@ -176,11 +174,10 @@ Visualization Manager:
                     elfin_link4:
                       elfin_link5:
                         elfin_link6:
+                          camera_link:
+                            {}
                           elfin_end_link:
-                            camera_link:
-                              {}
-            hand_eye//elfin_camera/aruco_marker_frame:
-              {}
+                            {}
       Update Interval: 0
       Value: true
   Enabled: true
@@ -208,16 +205,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.63341451
+      Distance: 1.54134274
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.349299848
-        Y: -0.145841807
-        Z: 0.0559717491
+        X: 0.222624406
+        Y: -0.241642833
+        Z: 0.632818043
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false

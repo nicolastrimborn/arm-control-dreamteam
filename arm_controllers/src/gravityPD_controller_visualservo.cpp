@@ -294,7 +294,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             save_data();
 
             // ********* 4. state 출력 *********
-            //print_state();
+            print_state();
         }
         loop_count_++;
     }
