@@ -1,12 +1,13 @@
 <launch>
   <include file="$(find aruco_hand_eye)/launch/aruco_hand_eye.launch">
-    <arg name="markerid"   value="7"/>
+    <arg name="markerid"   value="5"/>
     <arg name="markersize" value="0.177"/>
     <arg name="publish_tf" value="true"/>
 
     <arg name="marker_parent_frame" value="/elfin_base_link"/>
     <arg name="camera_parent_frame" value="/elfin_link6"/>
 
+    <!--added this -->
     <arg name="reference_frame" value="/elfin_base_link"/>
 
     <arg name="camera" value="/elfin_camera"/>

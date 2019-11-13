@@ -30,7 +30,7 @@
   <arg if="$(arg separate_window)" name="LAUNCH_PREFIX" value="xterm -e"/>
 
   <!-- Transform from the camera base link to the optical link (only necessary
-       if you want aruco_hand_eye to compute the transform for you) -->
+        if you want aruco_hand_eye to compute the transform for you) -->
   <arg name="xyz_optical_base" default="[0.0, 0.0, 0.0]"/>
   <arg name="rpy_optical_base" default="[0.0, 0.0, 0.0]"/>
 

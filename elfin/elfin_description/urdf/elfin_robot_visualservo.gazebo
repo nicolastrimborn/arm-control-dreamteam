@@ -48,8 +48,8 @@
       <camera name="head">
         <horizontal_fov>1.3962634</horizontal_fov>
         <image>
-          <width>640</width>
-          <height>480</height>
+          <width>600</width>
+          <height>600</height>
           <format>R8G8B8</format>
         </image>
         <clip>
@@ -62,7 +62,7 @@
                 That pixel's noise value is added to each of its color
                 channels, which at that point lie in the range [0,1]. -->
           <mean>0.0</mean>
-          <stddev>0.007</stddev>
+          <stddev>0.000</stddev>
         </noise>
       </camera>
       <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
