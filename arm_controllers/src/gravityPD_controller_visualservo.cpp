@@ -219,7 +219,13 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
     void camPoseCB(const geometry_msgs::PoseStamped &msg)
     {
-
+             x_est_(0) = msg.pose.position.x;
+             x_est_(1) = msg.pose.position.y;
+             x_est_(2) = msg.pose.position.z;
+             x_est_(3) = msg.pose.orientation.x;
+             x_est_(4) = msg.pose.orientation.y;
+             x_est_(5) = msg.pose.orientation.z;
+             x_est_(6) = msg.pose.orientation.w;
     }
 
     void starting(const ros::Time &time)
@@ -468,6 +474,9 @@ private:
 
     // kdl solver
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
+
+    // Input
+    KDL::JntArray x_est_;
 
     // Joint Space State
     KDL::JntArray qd_, qd_dot_, qd_ddot_;
