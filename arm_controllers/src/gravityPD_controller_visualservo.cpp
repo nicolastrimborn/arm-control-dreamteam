@@ -5,6 +5,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <tf/transform_listener.h>
 
 #include <urdf/model.h>
 
@@ -18,6 +19,10 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 #include <std_msgs/String.h>
+// #include <utils/trajectory_helper.h>
+
+
+
 #define PI 3.141592
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
@@ -220,19 +225,31 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
     void camPoseCB(const geometry_msgs::PoseStamped &msg)
     {
 
+            tf::TransformListener tflistener;
+            tf::StampedTransform stf;
+
+            try{
+                tflistener.lookupTransform("camera_link_visual_chicken", "world",  
+                                        ros::Time(0), stf);
+            }
+                catch (tf::TransformException ex){
+            ROS_ERROR("%s",ex.what());
+            //ros::Duration(1.0).sleep();
+            }
+            
+            x_est_(0) = stf.getOrigin().x();
+            x_est_(1) = stf.getOrigin().y();
+            x_est_(2) = stf.getOrigin().z();
+            x_est_(3) = stf.getRotation().x();
+            x_est_(4) = stf.getRotation().y();
+            x_est_(5) = stf.getRotation().z();
+            x_est_(6) = stf.getRotation().w();
+
     }
 
     void starting(const ros::Time &time)
     {
         t = 0.0;
-         // 0.2 joint state
-        // for (int i = 0; i < n_joints_; i++)
-        // {
-        //     q_(i) = joints_[i].getPosition();
-        //     qdot_(i) = joints_[i].getVelocity();
-        // }
-
-        
         ROS_INFO("Starting Gravity Compensation and PD Controller");
     }
 
@@ -250,8 +267,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             qdot_(i) = joints_[i].getVelocity();
         }
 
-        // ********* 1. Desired Trajecoty in Joint Space *********
-
+        
         // ********* 2. Motion Controller in Joint Space*********
         // *** 2.1 Error Definition in Joint Space ***
         e_.data = qd_.data - q_.data;
@@ -468,6 +484,9 @@ private:
 
     // kdl solver
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
+
+    // Input
+    KDL::JntArray x_est_;
 
     // Joint Space State
     KDL::JntArray qd_, qd_dot_, qd_ddot_;

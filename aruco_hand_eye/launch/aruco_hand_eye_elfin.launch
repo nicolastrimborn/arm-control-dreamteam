@@ -4,13 +4,16 @@
     <arg name="markersize" value="0.177"/>
     <arg name="publish_tf" value="true"/>
 
-    <arg name="marker_parent_frame" value="/elfin_base_link"/>
-    <arg name="camera_parent_frame" value="/elfin_end_link"/>
+    <arg name="marker_parent_frame" value="/camera_link_optical" />
+    <arg name="camera_parent_frame" value="/camera_link_optical"/>
 
     <!--added this -->
     
-
     <arg name="camera" value="/elfin_camera"/>
     <arg name="camera_frame" value="/camera_link_optical"/>
   </include>
+
+
+  
+
 </launch>
