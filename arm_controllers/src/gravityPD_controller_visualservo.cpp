@@ -220,7 +220,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
     void commandCB(const std_msgs::Float64MultiArrayConstPtr &msg)
     {
-        ROS_INFO("comando chickenfoot");
+        // ROS_INFO("comando chickenfoot");
         if (msg->data.size() != num_taskspace)
         {
             ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
@@ -241,7 +241,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             ros::Rate rate(10.0);
             
             tf::StampedTransform stf;
-            ROS_INFO("chickenfoot");
+            // ROS_INFO("chickenfoot");
             try{
                 tflistener.lookupTransform("/camera_link_visual_chicken", "/world",  
                                         ros::Time(0), stf);
@@ -434,6 +434,24 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             printf("x_est_(4): %f, ", x_est_(4));
             printf("x_est_(5): %f, ", x_est_(5));
             printf("x_est_(6): %f\n", x_est_(6));
+            printf("\n");
+            printf("*** Desired Position in Task Space (unit: m) ***\n");
+            printf("xd: %f, ", xd_.p(0));
+            printf("yd: %f, ", xd_.p(1));
+            printf("zd: %f\n", xd_.p(2));
+            printf("\n");
+            printf("*** Command from Subscriber in Task Space (unit: m) ***\n");
+            printf("x_cmd: %f, ", x_cmd_(0));
+            printf("y_cmd: %f, ", x_cmd_(1));
+            printf("z_cmd: %f, ", x_cmd_(2));
+            printf("r_cmd: %f, ", x_cmd_(3));
+            printf("p_cmd: %f, ", x_cmd_(4));
+            printf("y_cmd: %f\n", x_cmd_(5));
+            printf("\n");
+            printf("*** Actual Position in Task Space (unit: m) ***\n");
+            printf("x: %f, ", x_.p(0));
+            printf("y: %f, ", x_.p(1));
+            printf("z: %f\n", x_.p(2));
             printf("\n");
             count = 0;
         }
