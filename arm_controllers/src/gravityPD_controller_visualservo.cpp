@@ -5,7 +5,10 @@
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <geometry_msgs/PoseStamped.h>
+
 #include <kdl/chainjnttojacsolver.hpp>        // jacobian
+#include <kdl/chainfksolverpos_recursive.hpp> // forward kinematics
+
 #include <urdf/model.h>
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Quaternion.h"
@@ -172,14 +175,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             ex_(i) = 0;
         }
 
-        // marker_pose.data = Eigen::VectorXd::Zero(num_taskspace);
-        // marker_pose.data(0) = 0.0;
-        // marker_pose.data(1) = 0.0;
-        // marker_pose.data(2) = 1.5;   
-        // marker_pose.data(3) = 0;
-        // marker_pose.data(4) = PI;
-        // marker_pose.data(5) = 0;
-
          // PIDS////////////////////////////////////////////////////////////////
 
         // pids
@@ -243,7 +238,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             
             // ROS_INFO("chickenfoot");
             try{
-                tflistener.lookupTransform("/camera_link_visual_chicken", "/world",  
+                tflistener.lookupTransform("/camera_desired", "/elfin_base",
                                         ros::Time(0), stf);
             }
                 catch (tf::TransformException ex){
@@ -286,27 +281,29 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             qdot_(i) = joints_[i].getVelocity();
         }
 
-        // 0.3 end-effector state by Compute forward kinematics (x_,xdot_)
+        // *** 0.3 computing Jacobian J(q) ***
+        jnt_to_jac_solver_->JntToJac(q_, J_);
+
+        // *** 0.4 computing Jacobian transpose/inversion ***
+        J_transpose_ = J_.data.transpose();
+
+        // 0.5 end-effector state by Compute forward kinematics (x_,xdot_)
+        fk_pos_solver_->JntToCart(q_, x_);
+        xdot_ = J_.data * qdot_.data;
 
         // ********* 1. Desired Trajecoty in Task Space *********
-        x_co_.p(0) = x_est_(0);
-        x_co_.p(1) = x_est_(1);
-        x_co_.p(2) = x_est_(2);
+        xd_.p(0) = x_est_(0);
+        xd_.p(1) = x_est_(1);
+        xd_.p(2) = x_est_(2);
 
-        quat = tf::Quaternion(x_est_(3), x_est_(4), x_est_(5), x_est_(6));
+        quat = tf::Quaternion( xd_.p(3),  xd_.p(4),  xd_.p(5),  xd_.p(6));
         tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
 
-        x_co_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
-
-        // ********* 1. Desired Trajecoty in Task Space *********
-        xd_.p(0) = x_cmd_(0);
-        xd_.p(1) = x_cmd_(1);
-        xd_.p(2) = x_cmd_(2);
-        xd_.M = KDL::Rotation(KDL::Rotation::RPY(x_cmd_(3), x_cmd_(4), x_cmd_(5)));
+        xd_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
 
         // ********* 2. Motion Controller in Joint Space*********
         // *** 2.0 Error Definition in Task Space ***
-        ex_temp_ = diff(x_co_, xd_);
+        ex_temp_ = diff(x_, xd_);
 
         ex_(0) = ex_temp_(0);
         ex_(1) = ex_temp_(1);
@@ -314,14 +311,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         ex_(3) = ex_temp_(3);
         ex_(4) = ex_temp_(4);
         ex_(5) = ex_temp_(5);
-
-        // *** 2.1 computing Jacobian J(q) ***
-        jnt_to_jac_solver_->JntToJac(q_, J_);
-
-        xdot_ = J_.data * qdot_.data;
-
-        // *** 2.2 computing Jacobian transpose/inversion ***
-        J_transpose_ = J_.data.transpose();
 
         // *** 2.2 Compute model(M,C,G) ***
         id_solver_->JntToMass(q_, M_);
@@ -450,9 +439,9 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             printf("y_cmd: %f\n", x_cmd_(5));
             printf("\n");
             printf("*** Actual Position in Task Space (unit: m) ***\n");
-            printf("x: %f, ", x_co_.p(0));
-            printf("y: %f, ", x_co_.p(1));
-            printf("z: %f\n", x_co_.p(2));
+            printf("x: %f, ", x_.p(0));
+            printf("y: %f, ", x_.p(1));
+            printf("z: %f\n", x_.p(2));
             printf("\n");
             count = 0;
         }
@@ -485,6 +474,7 @@ private:
     Eigen::Matrix<double, num_taskspace, num_taskspace> J_transpose_;
 
     // kdl solver
+    boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_; //Solver to compute the forward kinematics (position)
     boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_; //Solver to compute the jacobian
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
 
@@ -497,7 +487,7 @@ private:
     // Task Space State
     // ver. 01
     KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
-    KDL::Frame x_co_;
+    KDL::Frame x_;
     KDL::Twist ex_temp_;
 
     // KDL::Twist xd_dot_, xd_ddot_;
