@@ -14,17 +14,17 @@ elfin:
         - elfin_joint6
       gains:
         elfin_joint1:
-          pid: {p: 400.0, i: 0, d: 25.0, i_clamp: 50, antiwindup: true}
+          pid: {p: 400.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
         elfin_joint2: 
-          pid: {p: 600.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
+          pid: {p: 400.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
         elfin_joint3:
-          pid: {p: 600.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
+          pid: {p: 400.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
         elfin_joint4: 
-          pid: {p: 600.0, i: 0, d: 5.0, i_clamp: 5, antiwindup: true}
+          pid: {p: 200.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
         elfin_joint5: 
-          pid: {p: 600.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
+          pid: {p: 200.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
         elfin_joint6: 
-          pid: {p: 200.0, i: 0, d: 30.0, i_clamp: 50, antiwindup: true}
+          pid: {p: 200.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
       root_link: world
       tip_link: camera_link_optical
 
