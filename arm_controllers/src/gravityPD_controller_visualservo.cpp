@@ -155,6 +155,9 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         // 4.4 jacobian solver 초기화
         jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
 
+        // 4.5 forward kinematics solver 초기화
+        fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
+
         // ********* 5. 각종 변수 초기화 *********
 
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
@@ -168,7 +171,15 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         // x_cmd_.data(1) = 0.0;
         // x_cmd_.data(2) = 0.80;
 
-        x_est_.data = Eigen::VectorXd::Zero(num_taskspace);
+        x_est_.data = Eigen::VectorXd::Zero(num_taskspace+1);
+        x_est_.data(0) = 0.6;
+        x_est_.data(2) = 0.5;
+
+        quat.setRPY(0, PI/2, 0);
+        x_est_.data(3) = quat[0];
+        x_est_.data(4) = quat[1];
+        x_est_.data(5) = quat[2];
+        x_est_.data(6) = quat[3];
 
         for (size_t i = 0; i < num_taskspace; i++)
         {
@@ -207,7 +218,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         sub = n.subscribe("command", 1000, &GravityPD_Controller_VisualServo::commandCB, this);
         
         //Visual servo camera subscriber
-        cam_sub = n.subscribe("/elfin_camera/aruco_tracker/pose", 1000, &GravityPD_Controller_VisualServo::camPoseCB, this);
+        cam_sub = n.subscribe("/aruco_single/pose", 1000, &GravityPD_Controller_VisualServo::camPoseCB, this);
 
         
         return true;
@@ -236,9 +247,9 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             ros::Rate rate(10.0);
             
             
-            // ROS_INFO("chickenfoot");
+            //ROS_INFO("chickenfoot");
             try{
-                tflistener.lookupTransform("/camera_desired", "/elfin_base",
+                tflistener.lookupTransform("/world", "/camera_frame_desired",
                                         ros::Time(0), stf);
             }
                 catch (tf::TransformException ex){
@@ -246,14 +257,14 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
                 ros::Duration(1.0).sleep();
             }
             
-            // x_est_(0) = stf.getOrigin().x();
-            // x_est_(1) = stf.getOrigin().y();
-            // x_est_(2) = stf.getOrigin().z();
-            // x_est_(3) = stf.getRotation().x();
-            // x_est_(4) = stf.getRotation().y();
-            // x_est_(5) = stf.getRotation().z();
-            // x_est_(6) = stf.getRotation().w();
-            // rate.sleep();
+             x_est_(0) = stf.getOrigin().x();
+             x_est_(1) = stf.getOrigin().y();
+             x_est_(2) = stf.getOrigin().z();
+             x_est_(3) = stf.getRotation().x();
+             x_est_(4) = stf.getRotation().y();
+             x_est_(5) = stf.getRotation().z();
+             x_est_(6) = stf.getRotation().w();
+             rate.sleep();
     }
 
     void starting(const ros::Time &time)
@@ -291,58 +302,58 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         fk_pos_solver_->JntToCart(q_, x_);
         xdot_ = J_.data * qdot_.data;
 
-        // ********* 1. Desired Trajecoty in Task Space *********
-        xd_.p(0) = x_est_(0);
-        xd_.p(1) = x_est_(1);
-        xd_.p(2) = x_est_(2);
+         // ********* 1. Desired Trajecoty in Task Space *********
+           xd_.p(0) = x_est_(0);
+           xd_.p(1) = x_est_(1);
+           xd_.p(2) = x_est_(2);
 
-        quat = tf::Quaternion( xd_.p(3),  xd_.p(4),  xd_.p(5),  xd_.p(6));
-        tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+                  quat = tf::Quaternion( x_est_(3),  x_est_(4),  x_est_(5),  x_est_(6));
+                  tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
 
-        xd_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
+                  xd_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
 
-        // ********* 2. Motion Controller in Joint Space*********
-        // *** 2.0 Error Definition in Task Space ***
-        ex_temp_ = diff(x_, xd_);
+                  // ********* 2. Motion Controller in Joint Space*********
+                  // *** 2.0 Error Definition in Task Space ***
+                  ex_temp_ = diff(x_, xd_);
 
-        ex_(0) = ex_temp_(0);
-        ex_(1) = ex_temp_(1);
-        ex_(2) = ex_temp_(2);
-        ex_(3) = ex_temp_(3);
-        ex_(4) = ex_temp_(4);
-        ex_(5) = ex_temp_(5);
+                  ex_(0) = ex_temp_(0);
+                  ex_(1) = ex_temp_(1);
+                  ex_(2) = ex_temp_(2);
+                  ex_(3) = ex_temp_(3);
+                  ex_(4) = ex_temp_(4);
+                  ex_(5) = ex_temp_(5);
 
-        // *** 2.2 Compute model(M,C,G) ***
-        id_solver_->JntToMass(q_, M_);
-        id_solver_->JntToCoriolis(q_, qdot_, C_);
-        id_solver_->JntToGravity(q_, G_);
+                  // *** 2.2 Compute model(M,C,G) ***
+                  id_solver_->JntToMass(q_, M_);
+                  id_solver_->JntToCoriolis(q_, qdot_, C_);
+                  id_solver_->JntToGravity(q_, G_);
 
-        // *** 2.3 Apply Torque Command to Actuator ***
+                  // *** 2.3 Apply Torque Command to Actuator ***
 
-        // ISHIRA: Manipulation
-        for (int i = 0; i < n_joints_; i++)
-        {
-            Kp_(i) = pids_[i].getGains().p_gain_;
-            Kd_(i) = pids_[i].getGains().d_gain_;
-            Ki_(i) = pids_[i].getGains().i_gain_;
-        }
+                  // ISHIRA: Manipulation
+                  for (int i = 0; i < n_joints_; i++)
+                  {
+                      Kp_(i) = pids_[i].getGains().p_gain_;
+                      Kd_(i) = pids_[i].getGains().d_gain_;
+                      Ki_(i) = pids_[i].getGains().i_gain_;
+                  }
 
-        aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(ex_)-Kd_.data.cwiseProduct(xdot_));
-        tau_d_.data = aux_d_.data + G_.data;
+                  aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(ex_)-Kd_.data.cwiseProduct(xdot_));
+                  tau_d_.data = aux_d_.data + G_.data;
 
-        for (int i = 0; i < n_joints_; i++)
-        {
-            joints_[i].setCommand(tau_d_(i));
-        }
+                  for (int i = 0; i < n_joints_; i++)
+                  {
+                      joints_[i].setCommand(tau_d_(i));
+                  }
 
-        if (loop_count_ % 1 == 0)
-        {
-            // ********* 3. data 저장 *********
-            save_data();
+                  if (loop_count_ % 1 == 0)
+                  {
+                      // ********* 3. data 저장 *********
+                      save_data();
 
-            // ********* 4. state 출력 *********
-            // print_state();
-        }
+                      // ********* 4. state 출력 *********
+                      print_state();
+                  }
         loop_count_++;
     }
 
