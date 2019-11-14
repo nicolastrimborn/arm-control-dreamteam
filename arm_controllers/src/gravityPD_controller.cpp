@@ -21,6 +21,7 @@
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
 #define SaveDataMax 49
+#define num_taskspace 6
 
 namespace arm_controllers
 {
@@ -190,7 +191,7 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         xd_.p(0) = 0;
         xd_.p(1) = 0;
         xd_.p(2) = 0.2;
-        xd_.M = KDL::Rotation(KDL::Rotation::RPY(0, 0, 180*KDL::deg2rad);
+        xd_.M = KDL::Rotation(KDL::Rotation::RPY(0, 0, 180*KDL::deg2rad));
 
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
 
@@ -252,7 +253,7 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
         }
         for (int i = 0; i < num_taskspace; i++)
         {
-            x_est_(i) = msg->data[i];
+            x_cmd_(i) = msg->data[i];
         }
     }
 
@@ -517,7 +518,7 @@ class GravityPD_Controller : public controller_interface::Controller<hardware_in
 
     // Task Space State
         // States
-    KDL::JntArray x_est_;
+    KDL::JntArray x_cmd_;
     // ver. 01
     KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
     KDL::Frame x_;
