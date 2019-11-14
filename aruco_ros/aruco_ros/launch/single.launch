@@ -18,11 +18,14 @@
         <param name="marker_size"        value="$(arg markerSize)"/>
         <param name="marker_id"          value="$(arg markerId)"/>
         <param name="reference_frame"    value="$(arg ref_frame)"/>   <!-- frame in which the marker pose will be refered -->
-        <param name="camera_frame"       value="/camera_link_optical"/>
+        <param name="camera_frame"       value="camera_link_optical"/>
         <!--<param name="camera_frame"       value="stereo_gazebo_$(arg eye)_camera_optical_frame"/> -->
         <param name="marker_frame"       value="$(arg marker_frame)" />
         <param name="corner_refinement"  value="$(arg corner_refinement)" />
     </node>
+
+     <node pkg="tf" type="static_transform_publisher" name="camera_desired_transform" 
+            args="0 0.3 0 0 -1.57 1.57 /aruco_marker_frame /camera_frame_desired  30"/>
 
 
 </launch>

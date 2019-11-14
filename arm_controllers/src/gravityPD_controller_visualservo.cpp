@@ -164,9 +164,9 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
 
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
-        x_cmd_.data(0) = 0.0;
-        x_cmd_.data(1) = 0.0;
-        x_cmd_.data(2) = 0.80;
+        // x_cmd_.data(0) = 0.0;
+        // x_cmd_.data(1) = 0.0;
+        // x_cmd_.data(2) = 0.80;
 
         x_est_.data = Eigen::VectorXd::Zero(num_taskspace);
 
@@ -246,13 +246,13 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
                 ros::Duration(1.0).sleep();
             }
             
-            x_est_(0) = stf.getOrigin().x();
-            x_est_(1) = stf.getOrigin().y();
-            x_est_(2) = stf.getOrigin().z();
-            x_est_(3) = stf.getRotation().x();
-            x_est_(4) = stf.getRotation().y();
-            x_est_(5) = stf.getRotation().z();
-            x_est_(6) = stf.getRotation().w();
+            // x_est_(0) = stf.getOrigin().x();
+            // x_est_(1) = stf.getOrigin().y();
+            // x_est_(2) = stf.getOrigin().z();
+            // x_est_(3) = stf.getRotation().x();
+            // x_est_(4) = stf.getRotation().y();
+            // x_est_(5) = stf.getRotation().z();
+            // x_est_(6) = stf.getRotation().w();
             // rate.sleep();
     }
 
@@ -341,7 +341,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             save_data();
 
             // ********* 4. state 출력 *********
-            print_state();
+            // print_state();
         }
         loop_count_++;
     }
