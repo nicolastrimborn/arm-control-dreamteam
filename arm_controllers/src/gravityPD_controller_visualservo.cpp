@@ -163,7 +163,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
         x_cmd_.data(0) = 0.0;
         x_cmd_.data(1) = 0.0;
-        x_cmd_.data(2) = 0.88;
+        x_cmd_.data(2) = 0.80;
 
         x_est_.data = Eigen::VectorXd::Zero(num_taskspace);
 
@@ -175,7 +175,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         // marker_pose.data = Eigen::VectorXd::Zero(num_taskspace);
         // marker_pose.data(0) = 0.0;
         // marker_pose.data(1) = 0.0;
-        // marker_pose.data(2) = 1.5;
+        // marker_pose.data(2) = 1.5;   
         // marker_pose.data(3) = 0;
         // marker_pose.data(4) = PI;
         // marker_pose.data(5) = 0;
@@ -220,7 +220,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
 
     void commandCB(const std_msgs::Float64MultiArrayConstPtr &msg)
     {
-        // ROS_INFO("comando chickenfoot");
+        // ROS_INFO("comand o chickenfoot");
         if (msg->data.size() != num_taskspace)
         {
             ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
@@ -240,7 +240,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
     {
             ros::Rate rate(10.0);
             
-            tf::StampedTransform stf;
+            
             // ROS_INFO("chickenfoot");
             try{
                 tflistener.lookupTransform("/camera_link_visual_chicken", "/world",  
@@ -346,7 +346,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             joints_[i].setCommand(tau_d_(i));
         }
 
-        if (loop_count_ % 10 == 0)
+        if (loop_count_ % 1 == 0)
         {
             // ********* 3. data 저장 *********
             save_data();
@@ -427,6 +427,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             printf("q_(5): %f\n", q_(5) * R2D);
             printf("\n");
             printf("*** Camera POS WRT world ***\n");
+
             printf("x_est_(0): %f, ", x_est_(0));
             printf("x_est_(1): %f, ", x_est_(1));
             printf("x_est_(2): %f, ", x_est_(2));
@@ -449,9 +450,9 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             printf("y_cmd: %f\n", x_cmd_(5));
             printf("\n");
             printf("*** Actual Position in Task Space (unit: m) ***\n");
-            printf("x: %f, ", x_.p(0));
-            printf("y: %f, ", x_.p(1));
-            printf("z: %f\n", x_.p(2));
+            printf("x: %f, ", x_co_.p(0));
+            printf("y: %f, ", x_co_.p(1));
+            printf("z: %f\n", x_co_.p(2));
             printf("\n");
             count = 0;
         }
@@ -525,6 +526,7 @@ private:
     ros::Subscriber sub;
     ros::Subscriber cam_sub;
     tf::TransformListener tflistener;
+    tf::StampedTransform stf;
 
     // ros message
     std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;
