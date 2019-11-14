@@ -69,8 +69,8 @@ void markerCallback( const geometry_msgs::PoseStamped& msg )
     tf::Transform world2marker_TF;
 
     // This just a random pose. We always fix this in gazebo
-    world2marker_TF.setOrigin(tf::Vector3(0.7, 0.0, 0.12));
-    q.setRPY(0, -1.05, 0);
+    world2marker_TF.setOrigin(tf::Vector3(0.0, 0.0, 1.5));
+    q.setRPY(0, 3.141, 0);
     world2marker_TF.setRotation(q);
 
     ROS_INFO("Calculating transforms");
@@ -91,18 +91,7 @@ void markerCallback( const geometry_msgs::PoseStamped& msg )
     ROS_INFO("Broadcasting transforms");
     // BroadCast World to Camera Frame - We use a new  camera_link_visual frame to keep the original and estimates separate
     br_cam.sendTransform(tf::StampedTransform(world2cam_TF, ros::Time::now(), "world", "camera_link_visual_chicken"));
-    tf::TransformListener tflistener;
-    tf::StampedTransform stf;
-
-    try{
-      tflistener.lookupTransform("camera_link_visual_chicken", "world",  
-                                ros::Time(0), stf);
-    }
-    catch (tf::TransformException ex){
-      ROS_ERROR("%s",ex.what());
-      //ros::Duration(1.0).sleep();
-    }
-
+   
     
     // geometry_msgs::PoseStamped msgfuck = geometry_msgs::PoseStamped();
     // msgfuck.header.stamp = ros::Time::now();
