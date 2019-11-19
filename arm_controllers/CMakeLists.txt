@@ -47,6 +47,7 @@ add_library(${PROJECT_NAME}
   src/gravityPD_controller.cpp
   src/gravityPD_controller_visualservo.cpp
   src/inverse_dynamics_task_space.cpp
+  src/obsavoid_controller.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
