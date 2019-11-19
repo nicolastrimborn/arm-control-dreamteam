@@ -48,6 +48,13 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         }
         n_joints_ = joint_names_.size();
 
+        state_names_.push_back("x");
+        state_names_.push_back("y");
+        state_names_.push_back("z");
+        state_names_.push_back("roll");
+        state_names_.push_back("pitch");
+        state_names_.push_back("yaw");
+
         if (n_joints_ == 0)
         {
             ROS_ERROR("List of joint names is empty.");
@@ -193,9 +200,9 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         for (size_t i=0; i<n_joints_; i++)
         {
             // Load PID Controller using gains set on parameter server
-            if (!pids_[i].init(ros::NodeHandle(n, "gains/" + joint_names_[i] + "/pid")))
+            if (!pids_[i].init(ros::NodeHandle(n, "gains/" + state_names_[i] + "/pid")))
             {
-                ROS_ERROR_STREAM("Failed to load PID parameters from " << joint_names_[i] + "/pid");
+                ROS_ERROR_STREAM("Failed to load PID parameters from " << state_names_[i] + "/pid");
                 return false;
             }
         }
@@ -467,6 +474,7 @@ private:
     //Joint handles
     unsigned int n_joints_;                               // joint 숫자
     std::vector<std::string> joint_names_;                // joint name ??
+    std::vector<std::string> state_names_;                // joint name ??
     std::vector<hardware_interface::JointHandle> joints_; // ??
     std::vector<urdf::JointConstSharedPtr> joint_urdfs_;  // ??
 
