@@ -26,6 +26,7 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
+#define Q_star 0.2
 
 namespace arm_controllers
 {
@@ -64,6 +65,8 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
         Ki_.resize(n_joints_);
         K_att_.resize(n_joints_);
         K_rep_.resize(n_joints_);
+        Kp_E_.resize(n_joints_);
+        Kp_E_.resize(n_joints_);
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -170,6 +173,9 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
         // 4.4 jacobian solver 초기화
         jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
 
+        // 4.5 forward kinematics solver 초기화
+        fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
+
         // ********* 5. 각종 변수 초기화 *********
 
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
@@ -177,7 +183,7 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
 
         f_att_.data = Eigen::VectorXd::Zero(n_joints_);
         f_rep_.data = Eigen::VectorXd::Zero(n_joints_);
-        d_q_.data = Eigen::VectorXd::Zero(n_joints_);
+        d_q_ = 0;
         q_star_.data = 360*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
         max_limit_.data = 180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
         min_limit_.data = -180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
@@ -299,7 +305,7 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
 
         //std::cout << "error X " << ex_ << std::endl;
 
-        aux_2_d_.data = xd_dot_ + Kp_E_.data.cwiseProduct(ex_);
+        aux_2_d_.data = xd_dot_.data + Kp_E_.data.cwiseProduct(ex_);
         jnt_to_jac_solver_->JntToJac(q_, J_);
 
         // *** 2.2 computing Jacobian transpose/inversion ***
@@ -308,15 +314,8 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
         f_att_.data = J_inv_ * aux_2_d_.data;
 
         // Repulsive potential where f_rep_ is a velocity
-        for (int i =0; i<n_joints_; i++){
-            d_q_.data(i) = fmin(abs(max_limit_.data(i)-q_.data(i)), abs(min_limit_.data(i)-q_.data(i)));
-            if (d_q_.data(i)<=q_star_.data(i)) {
-                f_rep_.data(i) =
-                        K_rep_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2));
-            } else{
-                f_rep_.data(i) = 0;
-            }
-        }
+        d_q_ = sqrt(pow(ex_(0), 2) + pow(ex_(1), 2) + pow(ex_(2),2));
+
 
         qd_dot_.data = f_att_.data + f_rep_.data;
 
@@ -528,6 +527,7 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
     KDL::Vector gravity_;
 
     // kdl solver
+    boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_; //Solver to compute the forward kinematics (position)
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
     boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_; //Solver to compute the jacobian
     boost::scoped_ptr<KDL::ChainIkSolverPos_LMA> ik_solver_; //Solver to compute inverse kinematics
@@ -542,23 +542,28 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
     // ver. 01
    // KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
     KDL::Frame xd_;
+    KDL::Frame x_;
     KDL::Twist ex_temp_;
+
+    // KDL::Twist xd_dot_, xd_ddot_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_;
 
     // Input
     KDL::JntArray aux_d_;
     KDL::JntArray comp_d_;
     KDL::JntArray tau_d_;
+    KDL::JntArray aux_2_d_;
 
     // Potential
     KDL::JntArray f_att_;
     KDL::JntArray f_rep_;
-    KDL::JntArray d_q_;
+    double d_q_;
     KDL::JntArray q_star_;
     KDL::JntArray min_limit_;
     KDL::JntArray max_limit_;
 
     // gains
-    KDL::JntArray Kp_, Ki_, Kd_, K_att_, K_rep_;
+    KDL::JntArray Kp_, Ki_, Kd_, K_att_, K_rep_, Kp_E_;
     std::vector<control_toolbox::Pid> pids_;
 
     // kdl and Eigen Jacobian
