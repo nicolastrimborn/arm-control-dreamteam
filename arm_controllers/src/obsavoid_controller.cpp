@@ -233,7 +233,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         {
             for (size_t i = 0; i < n_joints_; i++)
             {
-                x_cmd_(i) = msg->data[i]*KDL::deg2rad;
+                x_cmd_(i) = msg->data[i];
             }
         }
     }
@@ -268,7 +268,6 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         jnt_to_jac_solver_->JntToJac(q_, J_);
         // *** 1.2 computing inverse kinematics***
-        ROS_INFO_STREAM(qd_.data);
         ik_solver_->CartToJnt(q_, xd_, qd_);
 
         // ********* 2. Motion Controller in Joint Space*********
