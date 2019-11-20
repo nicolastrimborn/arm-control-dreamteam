@@ -470,6 +470,7 @@ class Kinematic_Controller : public controller_interface::Controller<hardware_in
     KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
     KDL::Frame x_;
     KDL::Twist ex_temp_;
+    KDL::Twist ex_temp_obs_;
 
     // KDL::Twist xd_dot_, xd_ddot_;
     Eigen::Matrix<double, num_taskspace, 1> ex_;
