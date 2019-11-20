@@ -257,6 +257,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
             q_(i) = joints_[i].getPosition();
             qdot_(i) = joints_[i].getVelocity();
         }
+        
 
         // ********* 1. Desired Trajecoty in Joint Space *********
 
