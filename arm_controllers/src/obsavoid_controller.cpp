@@ -26,7 +26,7 @@ namespace arm_controllers
 {
 class ObsAvoid_Controller : public controller_interface::Controller<hardware_interface::EffortJointInterface>
 {
-  public:
+    public:
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n)
     {
         // ********* 1. Get joint name / gain from the parameter server *********
@@ -139,8 +139,6 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         }
 
         // PIDS////////////////////////////////////////////////////////////////
-
-        // pids
         pids_.resize(n_joints_);
         for (size_t i=0; i<n_joints_; i++)
         {

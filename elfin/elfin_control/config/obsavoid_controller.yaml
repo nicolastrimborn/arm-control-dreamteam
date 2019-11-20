@@ -3,7 +3,7 @@ elfin:
       type: joint_state_controller/JointStateController
       publish_rate: 1000
     
-    obstacle_avoidance_controller:
+    obsavoid_controller:
       type: arm_controllers/ObsAvoid_Controller
       joints:
         - elfin_joint1
