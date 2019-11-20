@@ -26,7 +26,7 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
-#define Q_star 0.2
+#define Q_star 0.08
 
 namespace arm_controllers
 {
@@ -64,9 +64,6 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
         K_att_.resize(n_joints_);
-        K_rep_.resize(n_joints_);
-        Kp_E_.resize(n_joints_);
-        Kp_E_.resize(n_joints_);
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -183,19 +180,19 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
 
         f_att_.data = Eigen::VectorXd::Zero(n_joints_);
         f_rep_.data = Eigen::VectorXd::Zero(n_joints_);
+        q_rep_.data = Eigen::VectorXd::Zero(n_joints_);
         d_q_ = 0;
         q_star_.data = 360*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
         max_limit_.data = 180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
         min_limit_.data = -180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
-        K_att_.data = Eigen::VectorXd::Ones(n_joints_);
-        K_rep_.data = Eigen::VectorXd::Ones(n_joints_);
+        K_att_.data = 100.0*Eigen::VectorXd::Ones(n_joints_);
+        K_rep_ = 70.0;
 
         xd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_ddot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_old_.data = Eigen::VectorXd::Zero(n_joints_);
-        q_init_.data = Eigen::VectorXd::Zero(n_joints_);
 
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -223,8 +220,16 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
         x_cmd_(1) = -0.32;
         x_cmd_(2) = 0.56;
 
+        x_obs_.data = Eigen::VectorXd::Zero(num_taskspace);
+        x_obs_(0) = 10;
+        x_obs_(1) = 10;
+        x_obs_(2) = 10;
+        x_obs_(3) = 0;
+        x_obs_(4) = 0;
+        x_obs_(5) = 0;
         // 6.2 subsriber
         sub = n.subscribe("command", 1000, &TableAvoid_Controller::commandCB, this);
+        obs_sub = n.subscribe("obstacePosition", 1000, &TableAvoid_Controller::obstacleCB, this);
         return true;
     }
 
@@ -243,6 +248,23 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
             }
         }
     }
+
+    void obstacleCB(const std_msgs::Float64MultiArrayConstPtr &msg)
+    {
+        if (msg->data.size() != n_joints_)
+        {
+            ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
+            return;
+        }
+        else
+        {
+            for (size_t i = 0; i < n_joints_; i++)
+            {
+                x_obs_(i) = msg->data[i];
+            }
+        }
+    }
+
 
     void starting(const ros::Time &time)
     {
@@ -305,7 +327,8 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
 
         //std::cout << "error X " << ex_ << std::endl;
 
-        aux_2_d_.data = xd_dot_.data + Kp_E_.data.cwiseProduct(ex_);
+        aux_2_d_.data = xd_dot_.data + K_att_.data.cwiseProduct(ex_);
+
         jnt_to_jac_solver_->JntToJac(q_, J_);
 
         // *** 2.2 computing Jacobian transpose/inversion ***
@@ -314,10 +337,32 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
         f_att_.data = J_inv_ * aux_2_d_.data;
 
         // Repulsive potential where f_rep_ is a velocity
-        d_q_ = sqrt(pow(ex_(0), 2) + pow(ex_(1), 2) + pow(ex_(2),2));
+        xobs_dist_.p(0) = x_obs_(0);
+        xobs_dist_.p(1) = x_obs_(1);
+        xobs_dist_.p(2) = x_obs_(2);
+        xobs_dist_.M = KDL::Rotation(KDL::Rotation::RPY(x_obs_(3), x_obs_(4), x_obs_(5)));
 
+        ex_temp_obs_ = diff(x_, xobs_dist_);
 
-        qd_dot_.data = f_att_.data + f_rep_.data;
+        eobs_(0) = ex_temp_obs_(0);
+        eobs_(1) = ex_temp_obs_(1);
+        eobs_(2) = ex_temp_obs_(2);
+        eobs_(3) = ex_temp_obs_(3);
+        eobs_(4) = ex_temp_obs_(4);
+        eobs_(5) = ex_temp_obs_(5);
+
+        d_q_ = sqrt(pow(eobs_(0),2) +pow(eobs_(1),2) + pow(eobs_(2),2));
+
+        eobs_ = eobs_*(1/d_q_);
+
+        if (d_q_<=Q_star){
+            f_rep_.data = K_rep_*((1/d_q_)-(1/Q_star))*(pow((1/d_q_), 2))*ex_;
+            q_rep_.data = J_inv_ * f_rep_.data;
+            qd_dot_.data = f_att_.data + q_rep_.data;
+        }
+        else{
+            qd_dot_.data = f_att_.data;
+        }
 
         // *** 2.1 Error Definition in Joint Space ***
         e_.data = qd_.data - q_.data;
@@ -499,6 +544,11 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
             printf("%f\n", R2D * e_(5));
             printf("\n");
 
+            printf("*** Actual State in State Space (unit: deg) ***\n");
+            printf("x: %f, ", x_.p(0));
+            printf("y: %f, ", x_.p(1));
+            printf("z: %f, ", x_.p(2));
+            printf("\n");
 
             count = 0;
         }
@@ -533,17 +583,22 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
     boost::scoped_ptr<KDL::ChainIkSolverPos_LMA> ik_solver_; //Solver to compute inverse kinematics
 
     // Joint Space State
-    KDL::JntArray qd_, qd_dot_, qd_ddot_, x_cmd_, xd_dot_, q_init_;
+    KDL::JntArray qd_, qd_dot_, qd_ddot_, x_cmd_, xd_dot_, x_obs_;
     KDL::JntArray qd_old_;
     KDL::JntArray q_, qdot_;
     KDL::JntArray e_, e_dot_, e_int_;
 
+    // z point
+    
+
     // Task Space State
     // ver. 01
    // KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
-    KDL::Frame xd_;
+    KDL::Frame xd_, xobs_dist_;
     KDL::Frame x_;
     KDL::Twist ex_temp_;
+    KDL::Twist ex_temp_obs_;
+    Eigen::Matrix<double, num_taskspace, 1> eobs_;
 
     // KDL::Twist xd_dot_, xd_ddot_;
     Eigen::Matrix<double, num_taskspace, 1> ex_;
@@ -557,14 +612,16 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
     // Potential
     KDL::JntArray f_att_;
     KDL::JntArray f_rep_;
+    KDL::JntArray q_rep_;
     double d_q_;
     KDL::JntArray q_star_;
     KDL::JntArray min_limit_;
     KDL::JntArray max_limit_;
 
     // gains
-    KDL::JntArray Kp_, Ki_, Kd_, K_att_, K_rep_, Kp_E_;
+    KDL::JntArray Kp_, Ki_, Kd_, K_att_, Kp_E_;
     std::vector<control_toolbox::Pid> pids_;
+    double K_rep_;
 
     // kdl and Eigen Jacobian
     KDL::Jacobian J_;
@@ -579,6 +636,7 @@ class TableAvoid_Controller : public controller_interface::Controller<hardware_i
 
     // ros subscriber
     ros::Subscriber sub;
+    ros::Subscriber obs_sub;
 
     // ros message
     std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;

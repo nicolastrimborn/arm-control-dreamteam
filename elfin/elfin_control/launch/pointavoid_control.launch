@@ -1,5 +1,5 @@
 <launch>
-  <arg name="perspective" default="--perspective-file $(find arm_controllers)/obsAvoidController.perspective" />
+  <arg name="perspective" default="--perspective-file $(find arm_controllers)/pointAvoidController.perspective" />
 
   <rosparam file="$(find elfin_control)/config/pointavoid_control.yaml" command="load"/>
 

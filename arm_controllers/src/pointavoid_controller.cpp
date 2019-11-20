@@ -264,7 +264,7 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         {
             for (size_t i = 0; i < n_joints_; i++)
             {
-                x_obs_(i) = msg->data[i]*KDL::deg2rad;
+                x_obs_(i) = msg->data[i];
             }
         }
     }
@@ -514,6 +514,7 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
             printf("q_(3): %f, ", q_(3) * R2D);
             printf("q_(4): %f, ", q_(4) * R2D);
             printf("q_(5): %f\n", q_(5) * R2D);
+            printf("\n");
             printf("\n");
             //
             //
