@@ -175,9 +175,9 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         f_att_.data = Eigen::VectorXd::Zero(n_joints_);
         f_rep_.data = Eigen::VectorXd::Zero(n_joints_);
         d_q_.data = Eigen::VectorXd::Zero(n_joints_);
-        q_star_.data = 360*Eigen::VectorXd::Ones(n_joints_);
-        max_limit_.data = 180*Eigen::VectorXd::Ones(n_joints_);
-        min_limit_.data = -180*Eigen::VectorXd::Ones(n_joints_);
+        q_star_.data = 360*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
+        max_limit_.data = 180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
+        min_limit_.data = -180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
 
         xd_.data = Eigen::VectorXd::Zero(n_joints_);
         xd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
