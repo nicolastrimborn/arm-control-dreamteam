@@ -16,6 +16,7 @@
 #include <kdl/chainjnttojacsolver.hpp>        // jacobian
 #include <kdl/chainfksolverpos_recursive.hpp> // forward kinematics
 #include <kdl/chainjnttojacsolver.hpp>        // jacobian
+#include <kdl/chainiksolverpos_lma.hpp>           // inverse kinematics
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
@@ -61,7 +62,8 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         Kp_.resize(n_joints_);
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
-
+        K_att_.resize(n_joints_);
+        K_rep_.resize(n_joints_);
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -164,6 +166,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         id_solver_.reset(new KDL::ChainDynParam(kdl_chain_, gravity_));
 
+        ik_solver_.reset(new KDL::ChainIkSolverPos_LMA(kdl_chain_));
         // 4.4 jacobian solver 초기화
         jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
 
@@ -178,13 +181,15 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         q_star_.data = 360*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
         max_limit_.data = 180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
         min_limit_.data = -180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
+        K_att_.data = Eigen::VectorXd::Ones(n_joints_);
+        K_rep_.data = Eigen::VectorXd::Ones(n_joints_);
 
-        xd_.data = Eigen::VectorXd::Zero(n_joints_);
         xd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_ddot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_old_.data = Eigen::VectorXd::Zero(n_joints_);
+        q_init_.data = Eigen::VectorXd::Zero(n_joints_);
 
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -256,27 +261,27 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         // ********* 1. Desired Trajecoty in Joint Space *********
 
         // *** 1.1 Desired Trajectory in taskspace ***
-        for (size_t i = 0; i < n_joints_; i++)
-        {
-            xd_(i) = x_cmd_(i);
-        }
+        xd_.p(0) = x_cmd_(0);
+        xd_.p(1) = x_cmd_(1);
+        xd_.p(2) = x_cmd_(2);
+        xd_.M = KDL::Rotation(KDL::Rotation::RPY(x_cmd_(3), x_cmd_(4), x_cmd_(5)));
 
         jnt_to_jac_solver_->JntToJac(q_, J_);
-        // *** 2.2 computing Jacobian transpose/inversion ***
-        J_inv_ = J_.data.inverse();
-        qd_.data = J_inv_*xd_.data;
+        // *** 1.2 computing inverse kinematics***
+        ROS_INFO_STREAM(qd_.data);
+        ik_solver_->CartToJnt(q_, xd_, qd_);
 
         // ********* 2. Motion Controller in Joint Space*********
         // *** 2.0 Potential ***
         // Attractive potential where f_att_ is a velocity
-        f_att_.data = - Kp_.data.cwiseProduct(q_.data-qd_.data);
+        f_att_.data = - K_att_.data.cwiseProduct(q_.data-qd_.data);
 
         // Repulsive potential where f_rep_ is a velocity
         for (int i =0; i<n_joints_; i++){
             d_q_.data(i) = fmin(abs(max_limit_.data(i)-q_.data(i)), abs(min_limit_.data(i)-q_.data(i)));
             if (d_q_.data(i)<=q_star_.data(i)) {
                 f_rep_.data(i) =
-                        Kd_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2));
+                        K_rep_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2));
             } else{
                 f_rep_.data(i) = 0;
             }
@@ -494,9 +499,10 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     // kdl solver
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
     boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_; //Solver to compute the jacobian
+    boost::scoped_ptr<KDL::ChainIkSolverPos_LMA> ik_solver_; //Solver to compute inverse kinematics
 
     // Joint Space State
-    KDL::JntArray qd_, qd_dot_, qd_ddot_, x_cmd_, xd_dot_, xd_;
+    KDL::JntArray qd_, qd_dot_, qd_ddot_, x_cmd_, xd_dot_, q_init_;
     KDL::JntArray qd_old_;
     KDL::JntArray q_, qdot_;
     KDL::JntArray e_, e_dot_, e_int_;
@@ -504,7 +510,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     // Task Space State
     // ver. 01
    // KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
-    KDL::Frame x_;
+    KDL::Frame xd_;
     KDL::Twist ex_temp_;
 
     // Input
@@ -521,7 +527,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     KDL::JntArray max_limit_;
 
     // gains
-    KDL::JntArray Kp_, Ki_, Kd_;
+    KDL::JntArray Kp_, Ki_, Kd_, K_att_, K_rep_;
     std::vector<control_toolbox::Pid> pids_;
 
     // kdl and Eigen Jacobian
