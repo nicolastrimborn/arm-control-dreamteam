@@ -1,6 +1,6 @@
 <launch>
   <arg name="perspective" default="--perspective-file $(find arm_controllers)/obsAvoidController.perspective" />
-  
+
   <rosparam file="$(find elfin_control)/config/pointavoid_control.yaml" command="load"/>
 
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
@@ -12,3 +12,4 @@
   <node name = "my_rqt_dashboard" pkg = "rqt_gui" type = "rqt_gui" respawn = "false" output = "screen" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@'"
         args="$(arg perspective)" />
 </launch>
+it stat 

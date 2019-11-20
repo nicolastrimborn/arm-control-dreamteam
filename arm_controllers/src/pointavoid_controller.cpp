@@ -179,10 +179,6 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         f_rep_.data = Eigen::VectorXd::Zero(n_joints_);
         d_q_.data = Eigen::VectorXd::Zero(n_joints_);
         q_star_.data = 360*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
-        max_limit_.data = 180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
-        min_limit_.data = -180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
-        K_att_.data = Eigen::VectorXd::Ones(n_joints_);
-        K_rep_.data = Eigen::VectorXd::Ones(n_joints_);
 
         xd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -213,12 +209,18 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
-        x_cmd_(0) = 0.0;
-        x_cmd_(1) = -0.32;
-        x_cmd_(2) = 0.56;
+        x_cmd_(0) = 0.6;
+        x_cmd_(1) = 0.0;
+        x_cmd_(2) = 0.5;
+        x_cmd_(3) = 0;
+        x_cmd_(4) = 0;
+        x_cmd_(5) = 0;
+
+        x_obs_.data = Eigen::VectorXd::Zero(num_taskspace);
 
         // 6.2 subsriber
         sub = n.subscribe("command", 1000, &PointAvoid_Controller::commandCB, this);
+        sub = n.subscribe("obstacePosition", 1000, &PointAvoid_Controller::obstacleCB, this);
         return true;
     }
 
@@ -237,6 +239,24 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
             }
         }
     }
+
+    void obstacleCB(const std_msgs::Float64MultiArrayConstPtr &msg)
+    {
+        if (msg->data.size() != n_joints_)
+        {
+            ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
+            return;
+        }
+        else
+        {
+            for (size_t i = 0; i < n_joints_; i++)
+            {
+                x_obs_(i) = msg->data[i]*KDL::deg2rad;
+            }
+        }
+    }
+
+
 
     void starting(const ros::Time &time)
     {
@@ -502,7 +522,7 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
     boost::scoped_ptr<KDL::ChainIkSolverPos_LMA> ik_solver_; //Solver to compute inverse kinematics
 
     // Joint Space State
-    KDL::JntArray qd_, qd_dot_, qd_ddot_, x_cmd_, xd_dot_, q_init_;
+    KDL::JntArray qd_, qd_dot_, x_cmd_, xd_dot_, x_obs_;
     KDL::JntArray qd_old_;
     KDL::JntArray q_, qdot_;
     KDL::JntArray e_, e_dot_, e_int_;
@@ -523,8 +543,6 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
     KDL::JntArray f_rep_;
     KDL::JntArray d_q_;
     KDL::JntArray q_star_;
-    KDL::JntArray min_limit_;
-    KDL::JntArray max_limit_;
 
     // gains
     KDL::JntArray Kp_, Ki_, Kd_, K_att_, K_rep_;
