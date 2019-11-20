@@ -13,17 +13,17 @@ elfin:
         - elfin_joint5
         - elfin_joint6
       gains:
-        elfin_joint1:
-          pid: {p: 15.0, i: 0, d: 5.0}
-        elfin_joint2:
-          pid: {p: 15.0, i: 0, d: 5.0}
-        elfin_joint3:
-          pid: {p: 15.0, i: 0, d: 5.0}
-        elfin_joint4:
-          pid: {p: 100.0, i: 0, d: 5.0}
-        elfin_joint5:
-          pid: {p: 100.0, i: 0, d: 5.0}
-        elfin_joint6:
-          pid: {p: 100.0, i: 0, d: 5.0}
+        x:
+          pid: {p: 100.0, i: 0, d: 10.0}
+        y:
+          pid: {p: 100.0, i: 0, d: 10.0}
+        z:
+          pid: {p: 100.0, i: 0, d: 10.0}
+        roll:
+          pid: {p: 50.0, i: 0, d: 5.0}
+        pitch:
+          pid: {p: 50.0, i: 0, d: 5.0}
+        yaw:
+          pid: {p: 50.0, i: 0, d: 5.0}
       root_link: world
       tip_link: elfin_link6
