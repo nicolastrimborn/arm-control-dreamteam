@@ -167,6 +167,13 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
 
+        f_att_.data = Eigen::VectorXd::Zero(n_joints_);
+        f_rep_.data = Eigen::VectorXd::Zero(n_joints_);
+        d_q_.data = Eigen::VectorXd::Zero(n_joints_);
+        q_star_.data = 360*Eigen::VectorXd::Ones(n_joints_);
+        max_limit_.data = 180*Eigen::VectorXd::Ones(n_joints_);
+        min_limit_.data = -180*Eigen::VectorXd::Ones(n_joints_);
+
         qd_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_ddot_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -239,7 +246,6 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         for (size_t i = 0; i < n_joints_; i++)
         {
-                qd_dot_(i) = 0;
                 qd_(i) = q_cmd(i);
         }
 
@@ -262,12 +268,30 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
             Ki_(i) = pids_[i].getGains().i_gain_;
         }
 
+
+        // Attractive potential where f_att_ is a velocity
+        f_att_.data = - Kp_.data.cwiseProduct(q_.data-qd_.data);
+
+        // Repulsive potential where f_rep_ is a velocity
+        for (int i =0; i<n_joints_; i++){
+            d_q_.data(i) = fmin(abs(max_limit_.data(i)-q_.data(i)), abs(min_limit_.data(i)-q_.data(i)));
+            if (d_q_.data(i)<=q_star_.data(i)) {
+                f_rep_.data(i) =
+                        Kd_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2));
+            } else{
+                f_rep_.data(i) = 0;
+            }
+        }
+
+        qd_dot_.data = f_att_.data + f_rep_.data;
+
         // ISHIRA: Stabilizing Linear Control
         aux_d_.data = M_.data * (qd_ddot_.data + Kp_.data.cwiseProduct(e_.data) + Kd_.data.cwiseProduct(e_dot_.data));
         // ISHIRA: n(q, qdot)
         comp_d_.data = C_.data + G_.data;
         // ISHIRA: Nonlinear Compensation and Decoupling
         tau_d_.data = aux_d_.data + comp_d_.data;
+
 
         // ISHIRA: Manipulation
         for (int i = 0; i < n_joints_; i++)
@@ -463,6 +487,14 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     KDL::JntArray aux_d_;
     KDL::JntArray comp_d_;
     KDL::JntArray tau_d_;
+
+    // Potential
+    KDL::JntArray f_att_;
+    KDL::JntArray f_rep_;
+    KDL::JntArray d_q_;
+    KDL::JntArray q_star_;
+    KDL::JntArray min_limit_;
+    KDL::JntArray max_limit_;
 
     // gains
     KDL::JntArray Kp_, Ki_, Kd_;
