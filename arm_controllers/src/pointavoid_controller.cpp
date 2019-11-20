@@ -64,8 +64,6 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         Kp_.resize(n_joints_);
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
-        K_att_.resize(n_joints_);
-        K_rep_.resize(n_joints_);
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -180,11 +178,12 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
 
-        f_att_.data = Eigen::VectorXd::Zero(n_joints_);
+        q_att_.data = Eigen::VectorXd::Zero(n_joints_);
         f_rep_.data = Eigen::VectorXd::Zero(n_joints_);
+        q_rep_.data = Eigen::VectorXd::Zero(n_joints_);
         d_q_.data = Eigen::VectorXd::Zero(n_joints_);
 
-        xd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
+        // xd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         // qd_.data = Eigen::VectorXd::Zero(n_joints_);
         // qd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         // qd_ddot_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -194,7 +193,8 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
         qC_dot_.data = Eigen::VectorXd::Zero(n_joints_);
-        ad_dot_.data = Eigen::VectorXd::Zero(n_joints_);
+        eC_dot_.data = Eigen::VectorXd::Zero(n_joints_);
+        // ad_dot_.data = Eigen::VectorXd::Zero(n_joints_);
 
         // e_.data = Eigen::VectorXd::Zero(n_joints_);
         // e_dot_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -215,9 +215,9 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         // pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
-        x_cmd_(0) = 0.6;
-        x_cmd_(1) = 0.0;
-        x_cmd_(2) = 0.5;
+        x_cmd_(0) = 0.0;
+        x_cmd_(1) = -0.32;
+        x_cmd_(2) = 0.56;
         x_cmd_(3) = 0;
         x_cmd_(4) = 0;
         x_cmd_(5) = 0;
@@ -233,7 +233,7 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
 
         // 6.2 subsriber
         sub = n.subscribe("command", 1000, &PointAvoid_Controller::commandCB, this);
-        sub = n.subscribe("obstacePosition", 1000, &PointAvoid_Controller::obstacleCB, this);
+        obs_sub = n.subscribe("obstacePosition", 1000, &PointAvoid_Controller::obstacleCB, this);
         return true;
     }
 
@@ -318,38 +318,46 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
 
         jnt_to_jac_solver_->JntToJac(q_, J_);
 
-        jnt_to_jac_solver_->JntToJac(q_, J_);
-
         // *** 2.2 computing Jacobian transpose/inversion ***
         J_inv_ = J_.data.inverse();
 
-        qC_dot_.data = J_inv_ * aux_2_d_.data;
+        aux_2_d_.data = Kp_.data.cwiseProduct(ex_);
 
-        id_solver_->JntToMass(q_, M_);
-        id_solver_->JntToCoriolis(q_, qdot_, C_);
-        id_solver_->JntToGravity(q_, G_);
+        q_att_.data = J_inv_ * aux_2_d_.data;
 
-        // *** 1.2 computing inverse kinematics***
-        ROS_INFO_STREAM(qd_.data);
-        ik_solver_->CartToJnt(q_, xd_, qd_);
+        xobs_dist_.p(0) = x_obs_(0);
+        xobs_dist_.p(1) = x_obs_(1);
+        xobs_dist_.p(2) = x_obs_(2);
+        xobs_dist_.M = KDL::Rotation(KDL::Rotation::RPY(x_obs_(3), x_obs_(4), x_obs_(5)));
 
-        // ********* 2. Motion Controller in Joint Space*********
-        // *** 2.0 Potential ***
-        // Attractive potential where f_att_ is a velocity
-        f_att_.data = - K_att_.data.cwiseProduct(q_.data-qd_.data);
+        ex_temp_obs_ = diff(x_, xobs_dist_);
 
-        // // Repulsive potential where f_rep_ is a velocity
-        // for (int i =0; i<n_joints_; i++){
-        //     d_q_.data(i) = fmin(abs(max_limit_.data(i)-q_.data(i)), abs(min_limit_.data(i)-q_.data(i)));
-        //     if (d_q_.data(i)<=q_star_.data(i)) {
-        //         f_rep_.data(i) =
-        //                 K_rep_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2));
-        //     } else{
-        //         f_rep_.data(i) = 0;
-        //     }
-        // }
+        eobs_(0) = ex_temp_obs_(0);
+        eobs_(1) = ex_temp_obs_(1);
+        eobs_(2) = ex_temp_obs_(2);
+        eobs_(3) = ex_temp_obs_(3);
+        eobs_(4) = ex_temp_obs_(4);
+        eobs_(5) = ex_temp_obs_(5);
 
-        qd_dot_.data = f_att_.data + f_rep_.data;
+        if(eobs_(0) <= Q_Star || eobs_(1) <= Q_Star || eobs_(2) <= Q_Star){
+          printf("chicken foottt!!");
+          dx_sqr_ = pow(eobs_(0),2);
+          dy_sqr_ = pow(eobs_(1),2);
+          dz_sqr_ = pow(eobs_(2),2);
+          dqc_ = sqrt(dx_sqr_+dy_sqr_+dz_sqr_);
+
+          eobs_ = eobs_*(1/dqc_);
+
+          f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
+
+          q_rep_.data = J_inv_ * f_rep_.data;
+          qC_dot_.data = q_att_.data + q_rep_.data;
+        }else{
+          // printf("chicken wings!!");
+          qC_dot_.data = q_att_.data ;
+        }
+
+        // qC_dot_.data = q_att_.data + q_rep_.data;
 
         // *** 2.2 Compute model(M,C,G) ***
         id_solver_->JntToMass(q_, M_);
@@ -358,6 +366,7 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
 
         // *** 2.3 Apply Torque Command to Actuator ***
         // ISHIRA: Stabilizing Linear Control
+        eC_dot_.data = qC_dot_.data - qdot_.data;
         aux_d_.data = M_.data * (Kd_.data.cwiseProduct(eC_dot_.data)) ;
         comp_d_.data = C_.data.cwiseProduct(qdot_.data) + G_.data;
         tau_d_.data = aux_d_.data + comp_d_.data;
@@ -388,28 +397,28 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         SaveData_[0] = t;
 
         // Desired position in joint space (unit: rad)
-        SaveData_[1] = qd_(0);
-        SaveData_[2] = qd_(1);
-        SaveData_[3] = qd_(2);
-        SaveData_[4] = qd_(3);
-        SaveData_[5] = qd_(4);
-        SaveData_[6] = qd_(5);
-
-        // Desired velocity in joint space (unit: rad/s)
-        SaveData_[7] = qd_dot_(0);
-        SaveData_[8] = qd_dot_(1);
-        SaveData_[9] = qd_dot_(2);
-        SaveData_[10] = qd_dot_(3);
-        SaveData_[11] = qd_dot_(4);
-        SaveData_[12] = qd_dot_(5);
-
-        // Desired acceleration in joint space (unit: rad/s^2)
-        SaveData_[13] = qd_ddot_(0);
-        SaveData_[14] = qd_ddot_(1);
-        SaveData_[15] = qd_ddot_(2);
-        SaveData_[16] = qd_ddot_(3);
-        SaveData_[17] = qd_ddot_(4);
-        SaveData_[18] = qd_ddot_(5);
+        // SaveData_[1] = qd_(0);
+        // SaveData_[2] = qd_(1);
+        // SaveData_[3] = qd_(2);
+        // SaveData_[4] = qd_(3);
+        // SaveData_[5] = qd_(4);
+        // SaveData_[6] = qd_(5);
+        //
+        // // Desired velocity in joint space (unit: rad/s)
+        // SaveData_[7] = qd_dot_(0);
+        // SaveData_[8] = qd_dot_(1);
+        // SaveData_[9] = qd_dot_(2);
+        // SaveData_[10] = qd_dot_(3);
+        // SaveData_[11] = qd_dot_(4);
+        // SaveData_[12] = qd_dot_(5);
+        //
+        // // Desired acceleration in joint space (unit: rad/s^2)
+        // SaveData_[13] = qd_ddot_(0);
+        // SaveData_[14] = qd_ddot_(1);
+        // SaveData_[15] = qd_ddot_(2);
+        // SaveData_[16] = qd_ddot_(3);
+        // SaveData_[17] = qd_ddot_(4);
+        // SaveData_[18] = qd_ddot_(5);
 
         // Actual position in joint space (unit: rad)
         SaveData_[19] = q_(0);
@@ -427,29 +436,29 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         SaveData_[29] = qdot_(4);
         SaveData_[30] = qdot_(5);
 
-        // Error position in joint space (unit: rad)
-        SaveData_[31] = e_(0);
-        SaveData_[32] = e_(1);
-        SaveData_[33] = e_(2);
-        SaveData_[34] = e_(3);
-        SaveData_[35] = e_(4);
-        SaveData_[36] = e_(5);
-
-        // Error velocity in joint space (unit: rad/s)
-        SaveData_[37] = e_dot_(0);
-        SaveData_[38] = e_dot_(1);
-        SaveData_[39] = e_dot_(3);
-        SaveData_[40] = e_dot_(4);
-        SaveData_[41] = e_dot_(5);
-        SaveData_[42] = e_dot_(6);
-
-        // Error intergal value in joint space (unit: rad*sec)
-        SaveData_[43] = e_int_(0);
-        SaveData_[44] = e_int_(1);
-        SaveData_[45] = e_int_(2);
-        SaveData_[46] = e_int_(3);
-        SaveData_[47] = e_int_(4);
-        SaveData_[48] = e_int_(5);
+        // // Error position in joint space (unit: rad)
+        // SaveData_[31] = e_(0);
+        // SaveData_[32] = e_(1);
+        // SaveData_[33] = e_(2);
+        // SaveData_[34] = e_(3);
+        // SaveData_[35] = e_(4);
+        // SaveData_[36] = e_(5);
+        //
+        // // Error velocity in joint space (unit: rad/s)
+        // SaveData_[37] = e_dot_(0);
+        // SaveData_[38] = e_dot_(1);
+        // SaveData_[39] = e_dot_(3);
+        // SaveData_[40] = e_dot_(4);
+        // SaveData_[41] = e_dot_(5);
+        // SaveData_[42] = e_dot_(6);
+        //
+        // // Error intergal value in joint space (unit: rad*sec)
+        // SaveData_[43] = e_int_(0);
+        // SaveData_[44] = e_int_(1);
+        // SaveData_[45] = e_int_(2);
+        // SaveData_[46] = e_int_(3);
+        // SaveData_[47] = e_int_(4);
+        // SaveData_[48] = e_int_(5);
 
         // 2
         msg_qd_.data.clear();
@@ -461,9 +470,9 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         // 3
         for (int i = 0; i < n_joints_; i++)
         {
-            msg_qd_.data.push_back(qd_(i));
+            // msg_qd_.data.push_back(qd_(i));
             msg_q_.data.push_back(q_(i));
-            msg_e_.data.push_back(e_(i));
+            // msg_e_.data.push_back(e_(i));
         }
 
         for (int i = 0; i < SaveDataMax; i++)
@@ -489,14 +498,14 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
             printf("t = %f\n", t);
             printf("\n");
 
-            printf("*** Desired State in Joint Space (unit: deg) ***\n");
-            printf("qd_(0): %f, ", qd_(0)*R2D);
-            printf("qd_(1): %f, ", qd_(1)*R2D);
-            printf("qd_(2): %f, ", qd_(2)*R2D);
-            printf("qd_(3): %f, ", qd_(3)*R2D);
-            printf("qd_(4): %f, ", qd_(4)*R2D);
-            printf("qd_(5): %f\n", qd_(5)*R2D);
-            printf("\n");
+            // printf("*** Desired State in Joint Space (unit: deg) ***\n");
+            // printf("qd_(0): %f, ", qd_(0)*R2D);
+            // printf("qd_(1): %f, ", qd_(1)*R2D);
+            // printf("qd_(2): %f, ", qd_(2)*R2D);
+            // printf("qd_(3): %f, ", qd_(3)*R2D);
+            // printf("qd_(4): %f, ", qd_(4)*R2D);
+            // printf("qd_(5): %f\n", qd_(5)*R2D);
+            // printf("\n");
 
             printf("*** Actual State in Joint Space (unit: deg) ***\n");
             printf("q_(0): %f, ", q_(0) * R2D);
@@ -506,15 +515,15 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
             printf("q_(4): %f, ", q_(4) * R2D);
             printf("q_(5): %f\n", q_(5) * R2D);
             printf("\n");
-
-
-            printf("*** Joint Space Error (unit: deg)  ***\n");
-            printf("%f, ", R2D * e_(0));
-            printf("%f, ", R2D * e_(1));
-            printf("%f, ", R2D * e_(2));
-            printf("%f, ", R2D * e_(3));
-            printf("%f, ", R2D * e_(4));
-            printf("%f\n", R2D * e_(5));
+            //
+            //
+            // printf("*** Joint Space Error (unit: deg)  ***\n");
+            // printf("%f, ", R2D * e_(0));
+            // printf("%f, ", R2D * e_(1));
+            // printf("%f, ", R2D * e_(2));
+            // printf("%f, ", R2D * e_(3));
+            // printf("%f, ", R2D * e_(4));
+            // printf("%f\n", R2D * e_(5));
             printf("\n");
 
 
@@ -546,29 +555,36 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
 
     // kdl solver
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
+    boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_;
     boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_; //Solver to compute the jacobian
     boost::scoped_ptr<KDL::ChainIkSolverPos_LMA> ik_solver_; //Solver to compute inverse kinematics
 
     // Joint Space State
     // KDL::JntArray qd_, qd_dot_, x_cmd_, xd_dot_, x_obs_;
     // KDL::JntArray qd_old_;
-    KDL::JntArray q_, qdot_, qC_dot_, x_cmd_, xd_dot_, x_obs_;
+    KDL::JntArray q_, qdot_, qC_dot_, eC_dot_, x_cmd_, x_obs_;
     // KDL::JntArray e_, e_dot_, e_int_;
 
     // Task Space State
     // ver. 01
    // KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
-    KDL::Frame xd_;
+    KDL::Frame xd_, x_, xobs_dist_;
     KDL::Twist ex_temp_;
+    KDL::Twist ex_temp_obs_;
+
+    // KDL::Twist xd_dot_, xd_ddot_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_, eobs_;
+    Eigen::Matrix<double, num_taskspace, 1> xd_dot_;
 
     // Input
     KDL::JntArray aux_d_;
+    KDL::JntArray aux_2_d_;
     KDL::JntArray comp_d_;
     KDL::JntArray tau_d_;
 
     // Potential
-    KDL::JntArray f_att_;
-    KDL::JntArray f_rep_;
+    KDL::JntArray q_att_;
+    KDL::JntArray f_rep_, q_rep_;
     KDL::JntArray d_q_;
 
     // gains
@@ -581,6 +597,8 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
 
     // save the data
     double SaveData_[SaveDataMax];
+    double dqc_;
+    double dx_sqr_, dy_sqr_, dz_sqr_;
 
     // ros publisher
     ros::Publisher pub_qd_, pub_q_, pub_e_;
@@ -588,6 +606,7 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
 
     // ros subscriber
     ros::Subscriber sub;
+    ros::Subscriber obs_sub;
 
     // ros message
     std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;

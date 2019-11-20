@@ -12,4 +12,3 @@
   <node name = "my_rqt_dashboard" pkg = "rqt_gui" type = "rqt_gui" respawn = "false" output = "screen" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@'"
         args="$(arg perspective)" />
 </launch>
-it stat 
