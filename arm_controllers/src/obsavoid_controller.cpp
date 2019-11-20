@@ -15,6 +15,7 @@
 #include <kdl/chaindynparam.hpp>              // inverse dynamics
 #include <kdl/chainjnttojacsolver.hpp>        // jacobian
 #include <kdl/chainfksolverpos_recursive.hpp> // forward kinematics
+#include <kdl/chainjnttojacsolver.hpp>        // jacobian
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
@@ -23,6 +24,7 @@
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
 #define SaveDataMax 49
+#define num_taskspace 6
 
 namespace arm_controllers
 {
@@ -162,6 +164,9 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         id_solver_.reset(new KDL::ChainDynParam(kdl_chain_, gravity_));
 
+        // 4.4 jacobian solver 초기화
+        jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
+
         // ********* 5. 각종 변수 초기화 *********
 
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
@@ -174,6 +179,8 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         max_limit_.data = 180*Eigen::VectorXd::Ones(n_joints_);
         min_limit_.data = -180*Eigen::VectorXd::Ones(n_joints_);
 
+        xd_.data = Eigen::VectorXd::Zero(n_joints_);
+        xd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         qd_ddot_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -187,6 +194,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         e_int_.data = Eigen::VectorXd::Zero(n_joints_);
 
         // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
+        J_.resize(kdl_chain_.getNrOfJoints());
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
@@ -199,7 +207,10 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
-        q_cmd.data = Eigen::VectorXd::Zero(6);
+        x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
+        x_cmd_(0) = 0.0;
+        x_cmd_(1) = -0.32;
+        x_cmd_(2) = 0.56;
 
         // 6.2 subsriber
         sub = n.subscribe("command", 1000, &ObsAvoid_Controller::commandCB, this);
@@ -217,7 +228,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         {
             for (size_t i = 0; i < n_joints_; i++)
             {
-                q_cmd(i) = msg->data[i]*KDL::deg2rad;
+                x_cmd_(i) = msg->data[i]*KDL::deg2rad;
             }
         }
     }
@@ -244,12 +255,35 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         // ********* 1. Desired Trajecoty in Joint Space *********
 
+        // *** 1.1 Desired Trajectory in taskspace ***
         for (size_t i = 0; i < n_joints_; i++)
         {
-                qd_(i) = q_cmd(i);
+            xd_(i) = x_cmd_(i);
         }
 
+        jnt_to_jac_solver_->JntToJac(q_, J_);
+        // *** 2.2 computing Jacobian transpose/inversion ***
+        J_inv_ = J_.data.inverse();
+        qd_.data = J_inv_*xd_.data;
+
         // ********* 2. Motion Controller in Joint Space*********
+        // *** 2.0 Potential ***
+        // Attractive potential where f_att_ is a velocity
+        f_att_.data = - Kp_.data.cwiseProduct(q_.data-qd_.data);
+
+        // Repulsive potential where f_rep_ is a velocity
+        for (int i =0; i<n_joints_; i++){
+            d_q_.data(i) = fmin(abs(max_limit_.data(i)-q_.data(i)), abs(min_limit_.data(i)-q_.data(i)));
+            if (d_q_.data(i)<=q_star_.data(i)) {
+                f_rep_.data(i) =
+                        Kd_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2));
+            } else{
+                f_rep_.data(i) = 0;
+            }
+        }
+
+        qd_dot_.data = f_att_.data + f_rep_.data;
+
         // *** 2.1 Error Definition in Joint Space ***
         e_.data = qd_.data - q_.data;
         e_dot_.data = qd_dot_.data - qdot_.data;
@@ -267,23 +301,6 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
             Kd_(i) = pids_[i].getGains().d_gain_;
             Ki_(i) = pids_[i].getGains().i_gain_;
         }
-
-
-        // Attractive potential where f_att_ is a velocity
-        f_att_.data = - Kp_.data.cwiseProduct(q_.data-qd_.data);
-
-        // Repulsive potential where f_rep_ is a velocity
-        for (int i =0; i<n_joints_; i++){
-            d_q_.data(i) = fmin(abs(max_limit_.data(i)-q_.data(i)), abs(min_limit_.data(i)-q_.data(i)));
-            if (d_q_.data(i)<=q_star_.data(i)) {
-                f_rep_.data(i) =
-                        Kd_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2));
-            } else{
-                f_rep_.data(i) = 0;
-            }
-        }
-
-        qd_dot_.data = f_att_.data + f_rep_.data;
 
         // ISHIRA: Stabilizing Linear Control
         aux_d_.data = M_.data * (qd_ddot_.data + Kp_.data.cwiseProduct(e_.data) + Kd_.data.cwiseProduct(e_dot_.data));
@@ -476,12 +493,19 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
     // kdl solver
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
+    boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_; //Solver to compute the jacobian
 
     // Joint Space State
-    KDL::JntArray qd_, qd_dot_, qd_ddot_, q_cmd;
+    KDL::JntArray qd_, qd_dot_, qd_ddot_, x_cmd_, xd_dot_, xd_;
     KDL::JntArray qd_old_;
     KDL::JntArray q_, qdot_;
     KDL::JntArray e_, e_dot_, e_int_;
+
+    // Task Space State
+    // ver. 01
+   // KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
+    KDL::Frame x_;
+    KDL::Twist ex_temp_;
 
     // Input
     KDL::JntArray aux_d_;
@@ -499,6 +523,10 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     // gains
     KDL::JntArray Kp_, Ki_, Kd_;
     std::vector<control_toolbox::Pid> pids_;
+
+    // kdl and Eigen Jacobian
+    KDL::Jacobian J_;
+    Eigen::MatrixXd J_inv_;
 
     // save the data
     double SaveData_[SaveDataMax];
