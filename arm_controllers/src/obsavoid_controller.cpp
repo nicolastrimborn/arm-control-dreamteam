@@ -192,8 +192,10 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
-        // 6.2 subsriber
+        q_cmd.data = Eigen::VectorXd::Zero(6);
 
+        // 6.2 subsriber
+        sub = n.subscribe("command", 1000, &ObsAvoid_Controller::commandCB, this);
         return true;
     }
 
@@ -208,7 +210,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         {
             for (size_t i = 0; i < n_joints_; i++)
             {
-                qd_(i) = msg->data[i]*KDL::deg2rad;
+                q_cmd(i) = msg->data[i]*KDL::deg2rad;
             }
         }
     }
@@ -237,9 +239,8 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         for (size_t i = 0; i < n_joints_; i++)
         {
-            qd_ddot_(i) = -M_PI * M_PI / 4 * 45 * KDL::deg2rad * sin(M_PI / 2 * t);
-            qd_dot_(i) = M_PI / 2 * 45 * KDL::deg2rad * cos(M_PI / 2 * t);
-            qd_(i) = 45 * KDL::deg2rad * sin(M_PI / 2* t);
+                qd_dot_(i) = 0;
+                qd_(i) = q_cmd(i);
         }
 
         // ********* 2. Motion Controller in Joint Space*********
@@ -453,7 +454,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
 
     // Joint Space State
-    KDL::JntArray qd_, qd_dot_, qd_ddot_;
+    KDL::JntArray qd_, qd_dot_, qd_ddot_, q_cmd;
     KDL::JntArray qd_old_;
     KDL::JntArray q_, qdot_;
     KDL::JntArray e_, e_dot_, e_int_;
@@ -473,6 +474,9 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     // ros publisher
     ros::Publisher pub_qd_, pub_q_, pub_e_;
     ros::Publisher pub_SaveData_;
+
+    // ros subscriber
+    ros::Subscriber sub;
 
     // ros message
     std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;
