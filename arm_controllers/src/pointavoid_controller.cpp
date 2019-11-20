@@ -26,8 +26,8 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
-#define Q_Star 0.2
-#define Rep_Gradient 5
+#define Q_Star 0.05
+#define Rep_Gradient 40
 
 namespace arm_controllers
 {
@@ -44,6 +44,12 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
             return false;
         }
         n_joints_ = joint_names_.size();
+        state_names_.push_back("x");
+        state_names_.push_back("y");
+        state_names_.push_back("z");
+        state_names_.push_back("roll");
+        state_names_.push_back("pitch");
+        state_names_.push_back("yaw");
 
         if (n_joints_ == 0)
         {
@@ -151,9 +157,9 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         for (size_t i=0; i<n_joints_; i++)
         {
             // Load PID Controller using gains set on parameter server
-            if (!pids_[i].init(ros::NodeHandle(n, "gains/" + joint_names_[i] + "/pid")))
+            if (!pids_[i].init(ros::NodeHandle(n, "gains/" + state_names_[i] + "/pid")))
             {
-                ROS_ERROR_STREAM("Failed to load PID parameters from " << joint_names_[i] + "/pid");
+                ROS_ERROR_STREAM("Failed to load PID parameters from " << state_names_[i] + "/pid");
                 return false;
             }
         }
@@ -215,20 +221,14 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         // pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
-        x_cmd_(0) = 0.0;
+        x_cmd_(0) = 0.1;
         x_cmd_(1) = -0.32;
-        x_cmd_(2) = 0.56;
-        x_cmd_(3) = 0;
-        x_cmd_(4) = 0;
-        x_cmd_(5) = 0;
+        x_cmd_(2) = 0.7;
 
         x_obs_.data = Eigen::VectorXd::Zero(num_taskspace);
         x_obs_(0) = 10;
         x_obs_(1) = 10;
         x_obs_(2) = 10;
-        x_obs_(3) = 0;
-        x_obs_(4) = 0;
-        x_obs_(5) = 0;
 
 
         // 6.2 subsriber
@@ -248,7 +248,7 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         {
             for (size_t i = 0; i < n_joints_; i++)
             {
-                x_cmd_(i) = msg->data[i]*KDL::deg2rad;
+                x_cmd_(i) = msg->data[i];
             }
         }
     }
@@ -339,20 +339,17 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         eobs_(4) = ex_temp_obs_(4);
         eobs_(5) = ex_temp_obs_(5);
 
-        if(eobs_(0) <= Q_Star || eobs_(1) <= Q_Star || eobs_(2) <= Q_Star){
-          printf("chicken foottt!!");
-          dx_sqr_ = pow(eobs_(0),2);
-          dy_sqr_ = pow(eobs_(1),2);
-          dz_sqr_ = pow(eobs_(2),2);
-          dqc_ = sqrt(dx_sqr_+dy_sqr_+dz_sqr_);
-
-          eobs_ = eobs_*(1/dqc_);
-
-          f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
-
-          q_rep_.data = J_inv_ * f_rep_.data;
-          qC_dot_.data = q_att_.data + q_rep_.data;
-        }else{
+        // printf("chicken foottt!!");
+        dx_sqr_ = pow(eobs_(0),2);
+        dy_sqr_ = pow(eobs_(1),2);
+        dz_sqr_ = pow(eobs_(2),2);
+        dqc_ = sqrt(dx_sqr_+dy_sqr_+dz_sqr_);
+        if(dqc_ <= Q_Star) {
+            eobs_ = eobs_*(1/dqc_);
+            f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
+            q_rep_.data = J_inv_ * f_rep_.data;
+            qC_dot_.data = q_att_.data + q_rep_.data;
+        } else {
           // printf("chicken wings!!");
           qC_dot_.data = q_att_.data ;
         }
@@ -515,7 +512,22 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
             printf("q_(4): %f, ", q_(4) * R2D);
             printf("q_(5): %f\n", q_(5) * R2D);
             printf("\n");
+
+            printf("*** Commanded Position (unit: task space) ***\n");
+            printf("x_cmd_(0): %f, ", x_cmd_(0));
+            printf("x_cmd_(1): %f, ", x_cmd_(1));
+            printf("x_cmd_(2): %f, ", x_cmd_(2));
+            printf("x_cmd_(3): %f, ", x_cmd_(3));
+            printf("x_cmd_(4): %f, ", x_cmd_(4));
+            printf("x_cmd_(5): %f\n", x_cmd_(5));
             printf("\n");
+
+            printf("*** Actual Position in Task Space (unit: m) ***\n");
+            printf("x: %f, ", x_.p(0));
+            printf("y: %f, ", x_.p(1));
+            printf("z: %f\n", x_.p(2));
+            printf("\n");
+
             //
             //
             // printf("*** Joint Space Error (unit: deg)  ***\n");
@@ -539,7 +551,8 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
 
     //Joint handles
     unsigned int n_joints_;                               // joint 숫자
-    std::vector<std::string> joint_names_;                // joint name ??
+    std::vector<std::string> joint_names_;
+    std::vector<std::string> state_names_;
     std::vector<hardware_interface::JointHandle> joints_; // ??
     std::vector<urdf::JointConstSharedPtr> joint_urdfs_;  // ??
 
