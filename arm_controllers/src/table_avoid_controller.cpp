@@ -31,7 +31,7 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
-#define Q_Star 0.4
+#define Q_Star 0.1
 #define Rep_Gradient 40
 
 namespace arm_controllers
@@ -243,7 +243,7 @@ namespace arm_controllers
             double step_x = 0.4/49;
             double step_y = 0.4/49;
             double step_z = 0.05/49;
-            for (size_t i; i<49; i++){
+            for (size_t i = 0; i<49; i++){
                 particles_x[i+1] = particles_x[i] + step_x;
                 particles_y[i+1] = particles_y[i] + step_y;
                 particles_z[i+1] = particles_z[i] + step_z;
@@ -349,9 +349,9 @@ namespace arm_controllers
             q_att_.data = J_inv_ * aux_2_d_.data;
             // Repulsive
             dqc_ = 100;
-            for (size_t i=0; i<50; i++){
-                for (size_t j=0; j<50; j++) {
-                    for (size_t k=0; k < 50; k++) {
+            for (int i=0; i<50; i++){
+                for (int j=0; j<50; j++) {
+                    for (int k=0; k < 50; k++) {
                         double d_;
                         d_ = sqrt(pow(particles_x[i] - x_.p(0), 2) + pow(particles_y[j] - x_.p(1), 2) +
                                   pow(particles_z[k] - x_.p(2), 2));
@@ -367,9 +367,7 @@ namespace arm_controllers
                     }
                 }
             }
-           ROS_INFO_STREAM(dqc_);
             if(dqc_ <= Q_Star) {
-                printf("Butterfly");
                 eobs_ = eobs_*(1/dqc_);
                 f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
                 q_rep_.data = J_inv_ * f_rep_.data;
