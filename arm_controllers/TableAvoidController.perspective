@@ -627,7 +627,7 @@
               "keys": {
                 "publishers": {
                   "type": "repr",
-                  "repr": "u\"[{'topic_name': '/elfin/table_avoid_controller/command', 'type_name': 'std_msgs/Float64MultiArray', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/table_avoid_controller/command/data': '[0.1, 0.1, 0.6, 0, 0, 0]'}, 'publisher_id': 0, 'counter': 1}, {'type_name': 'std_msgs/Float64MultiArray', 'topic_name': '/elfin/table_avoid_controller/obstacePosition', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/table_avoid_controller/obstacePosition/data': '[0.1, -0.32, 0.52, 0, 0, 0]'}, 'publisher_id': 1, 'counter': 17}]\""
+                  "repr": "u\"[{'topic_name': '/elfin/table_avoid_controller/command', 'type_name': 'std_msgs/Float64MultiArray', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/table_avoid_controller/command/data': '[0.1, -0.3, 0.4, 1.57, 0, 0]'}, 'publisher_id': 0, 'counter': 1}]\""
                 }
               },
               "groups": {}

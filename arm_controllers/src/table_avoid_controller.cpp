@@ -4,6 +4,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <control_toolbox/pid.h>
+#include <sensor_msgs/PointCloud2.h>
 
 #include <urdf/model.h>
 
@@ -21,12 +22,16 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <geometry_msgs/PolygonStamped.h>
+#include <geometry_msgs/Point.h>
+#include <visualization_msgs/Marker.h>
+
 #define PI 3.141592
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
-#define Q_Star 0.05
+#define Q_Star 0.4
 #define Rep_Gradient 40
 
 namespace arm_controllers
@@ -217,6 +222,7 @@ namespace arm_controllers
             pub_qd_ = n.advertise<std_msgs::Float64MultiArray>("qd", 1000);
             pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
             pub_e_ = n.advertise<std_msgs::Float64MultiArray>("e", 1000);
+            poly_pub = n.advertise<visualization_msgs::Marker>("obstacle", 0);
 
             // pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
@@ -230,10 +236,24 @@ namespace arm_controllers
             x_obs_(1) = 10;
             x_obs_(2) = 10;
 
+            particles_x[0] = 0.0;
+            particles_y[0] = -0.6;
+            particles_z[0] = 0.2;
+
+            double step_x = 0.4/49;
+            double step_y = 0.4/49;
+            double step_z = 0.05/49;
+            for (size_t i; i<49; i++){
+                particles_x[i+1] = particles_x[i] + step_x;
+                particles_y[i+1] = particles_y[i] + step_y;
+                particles_z[i+1] = particles_z[i] + step_z;
+            }
+
 
             // 6.2 subsriber
             sub = n.subscribe("command", 1000, &TableAvoid_Controller::commandCB, this);
             obs_sub = n.subscribe("obstacePosition", 1000, &TableAvoid_Controller::obstacleCB, this);
+            table_sub = n.subscribe("particles_pcl", 1000, &TableAvoid_Controller::particlesCB, this);
             return true;
         }
 
@@ -269,7 +289,10 @@ namespace arm_controllers
             }
         }
 
-
+        void particlesCB(const sensor_msgs::PointCloud2 &msg)
+        {
+            particles_ = msg;
+        }
 
         void starting(const ros::Time &time)
         {
@@ -324,33 +347,35 @@ namespace arm_controllers
             aux_2_d_.data = Kp_.data.cwiseProduct(ex_);
 
             q_att_.data = J_inv_ * aux_2_d_.data;
-
-            xobs_dist_.p(0) = x_obs_(0);
-            xobs_dist_.p(1) = x_obs_(1);
-            xobs_dist_.p(2) = x_obs_(2);
-            xobs_dist_.M = KDL::Rotation(KDL::Rotation::RPY(x_obs_(3), x_obs_(4), x_obs_(5)));
-
-            ex_temp_obs_ = diff(x_, xobs_dist_);
-
-            eobs_(0) = ex_temp_obs_(0);
-            eobs_(1) = ex_temp_obs_(1);
-            eobs_(2) = ex_temp_obs_(2);
-            eobs_(3) = ex_temp_obs_(3);
-            eobs_(4) = ex_temp_obs_(4);
-            eobs_(5) = ex_temp_obs_(5);
-
-            // printf("chicken foottt!!");
-            dx_sqr_ = pow(eobs_(0),2);
-            dy_sqr_ = pow(eobs_(1),2);
-            dz_sqr_ = pow(eobs_(2),2);
-            dqc_ = sqrt(dx_sqr_+dy_sqr_+dz_sqr_);
+            // Repulsive
+            dqc_ = 100;
+            for (size_t i=0; i<50; i++){
+                for (size_t j=0; j<50; j++) {
+                    for (size_t k=0; k < 50; k++) {
+                        double d_;
+                        d_ = sqrt(pow(particles_x[i] - x_.p(0), 2) + pow(particles_y[j] - x_.p(1), 2) +
+                                  pow(particles_z[k] - x_.p(2), 2));
+                        if (d_ < dqc_) {
+                            dqc_ = d_;
+                            eobs_(0) = x_.p(0) - particles_x[i];
+                            eobs_(1) = x_.p(1) - particles_y[i];
+                            eobs_(2) = x_.p(2) - particles_z[i];
+                            eobs_(3) = 0;
+                            eobs_(4) = 0;
+                            eobs_(5) = 0;
+                        }
+                    }
+                }
+            }
+           ROS_INFO_STREAM(dqc_);
             if(dqc_ <= Q_Star) {
+                printf("Butterfly");
                 eobs_ = eobs_*(1/dqc_);
                 f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
                 q_rep_.data = J_inv_ * f_rep_.data;
                 qC_dot_.data = q_att_.data + q_rep_.data;
             } else {
-                // printf("chicken wings!!");
+                //printf("chicken wings!!");
                 qC_dot_.data = q_att_.data ;
             }
 
@@ -490,6 +515,7 @@ namespace arm_controllers
             static int count = 0;
             if (count > 99)
             {
+                pubPolygon();
                 printf("*********************************************************\n\n");
                 printf("*** Simulation Time (unit: sec)  ***\n");
                 printf("t = %f\n", t);
@@ -543,6 +569,35 @@ namespace arm_controllers
                 count = 0;
             }
             count++;
+        }
+
+        void pubPolygon()
+        {
+
+            visualization_msgs::Marker marker;
+            marker.header.frame_id = "world";
+            marker.header.stamp = ros::Time();
+            // marker.ns = "my_namespace";
+            marker.id = 0;
+            marker.type = visualization_msgs::Marker::CUBE;
+            marker.action = visualization_msgs::Marker::ADD;
+            marker.pose.position.x = particles_x[0] + table.width/2;
+            marker.pose.position.y = particles_y[0] + table.length/2;
+            marker.pose.position.z = particles_z[0] + table.height/2;
+            marker.pose.orientation.x = 0.0;
+            marker.pose.orientation.y = 0.0;
+            marker.pose.orientation.z = 0.0;
+            marker.pose.orientation.w = 1.0;
+            marker.scale.x = table.width;
+            marker.scale.y = table.length;
+            marker.scale.z = table.height;
+            marker.color.a = 1.0; // Don't forget to set the alpha!
+            marker.color.r = 0.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            //only if using a MESH_RESOURCE marker type:
+            // marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+            poly_pub.publish( marker );
         }
 
     private:
@@ -617,14 +672,24 @@ namespace arm_controllers
         // ros publisher
         ros::Publisher pub_qd_, pub_q_, pub_e_;
         ros::Publisher pub_SaveData_;
+        ros::Publisher poly_pub;
 
         // ros subscriber
         ros::Subscriber sub;
         ros::Subscriber obs_sub;
+        ros::Subscriber table_sub;
 
         // ros message
         std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;
         std_msgs::Float64MultiArray msg_SaveData_;
+        sensor_msgs::PointCloud2 particles_;
+
+        double d_q;
+        double particles_x [50];
+        double particles_y [50];
+        double particles_z [50];
+
+        struct Table { double width, length, height;} table = {0.4,0.4,0.05};
     };
 }; // namespace arm_controllers
 PLUGINLIB_EXPORT_CLASS(arm_controllers::TableAvoid_Controller, controller_interface::ControllerBase)
