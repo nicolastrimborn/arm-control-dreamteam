@@ -1,0 +1,32 @@
+elfin:
+    joint_state_controller:
+      type: joint_state_controller/JointStateController
+      publish_rate: 1000
+    
+    gravityPD_controller_visualservo:
+      type: arm_controllers/GravityPD_Controller_VisualServo_IB
+      joints:
+        - elfin_joint1
+        - elfin_joint2
+        - elfin_joint3
+        - elfin_joint4
+        - elfin_joint5
+        - elfin_joint6
+      gains:
+        x:
+          pid: {p: 1000.0, i: 0, d: 30.0, i_clamp: 50, antiwindup: true}
+        y:
+          pid: {p: 1000.0, i: 0, d: 30.0, i_clamp: 50, antiwindup: true}
+        z:
+          pid: {p: 1000.0, i: 0, d: 30.0, i_clamp: 50, antiwindup: true}
+        roll:
+          pid: {p: 450.0, i: 0, d: 30.0, i_clamp: 50, antiwindup: true}
+        pitch:
+          pid: {p: 450.0, i: 0, d: 30.0, i_clamp: 50, antiwindup: true}
+        yaw:
+          pid: {p: 450.0, i: 0, d: 30.0, i_clamp: 50, antiwindup: true}
+      root_link: world
+      tip_link: camera_link_optical
+
+
+        

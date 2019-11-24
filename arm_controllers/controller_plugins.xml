@@ -66,6 +66,12 @@
     </description>
   </class>
 
+  <class name="arm_controllers/GravityPD_Controller_VisualServo_IB" type="arm_controllers::GravityPD_Controller_VisualServo_IB" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Gravity PD Visual servo Controller Image Based
+    </description>
+  </class>
+
   <class name="arm_controllers/ObsAvoid_Controller" type="arm_controllers::ObsAvoid_Controller" base_class_type="controller_interface::ControllerBase">
     <description>
       Obastacle avoidance Controller
