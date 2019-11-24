@@ -31,7 +31,7 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
-#define Q_Star 0.1
+#define Q_Star 0.01
 #define Rep_Gradient 40
 
 namespace arm_controllers
@@ -350,31 +350,38 @@ namespace arm_controllers
             // Repulsive
             dqc_ = 100;
             qC_dot_.data = q_att_.data ;
-            for (int i=0; i<50; i++){
-                for (int j=0; j<50; j++) {
-                    for (int k=0; k < 50; k++) {
-                        double d_;
-                        d_ = sqrt(pow(particles_x[i] - x_.p(0), 2) + pow(particles_y[j] - x_.p(1), 2) +
-                                  pow(particles_z[k] - x_.p(2), 2));
-                        if (d_ < dqc_) {
-                            dqc_ = d_;
-                            eobs_(0) = x_.p(0) - particles_x[i];
-                            eobs_(1) = x_.p(1) - particles_y[i];
-                            eobs_(2) = x_.p(2) - particles_z[i];
-                            eobs_(3) = 0;
-                            eobs_(4) = 0;
-                            eobs_(5) = 0;
+
+            for (int i=0; i<n_joints_; i++){
+                fk_pos_solver_->JntToCart(q_,x_, i);
+                jnt_to_jac_solver_->JntToJac(q_, J_, i);
+                J_inv_ = J_.data.inverse();
+                for (int i=0; i<50; i++){
+                    for (int j=0; j<50; j++) {
+                        for (int k=0; k < 50; k++) {
+                            double d_;
+                            d_ = sqrt(pow(particles_x[i] - x_.p(0), 2) + pow(particles_y[j] - x_.p(1), 2) +
+                                      pow(particles_z[k] - x_.p(2), 2));
+                            if (d_ < dqc_) {
+                                dqc_ = d_;
+                                eobs_(0) = x_.p(0) - particles_x[i];
+                                eobs_(1) = x_.p(1) - particles_y[i];
+                                eobs_(2) = x_.p(2) - particles_z[i];
+                                eobs_(3) = 0;
+                                eobs_(4) = 0;
+                                eobs_(5) = 0;
+                            }
                         }
                     }
                 }
+                if(dqc_ <= Q_Star) {
+                    eobs_ = eobs_*(1/dqc_);
+                    f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
+                    q_rep_.data = J_inv_ * f_rep_.data;
+                    qC_dot_.data = qC_dot_.data + q_rep_.data;
+                }
+
             }
-            if(dqc_ <= Q_Star) {
-                eobs_ = eobs_*(1/dqc_);
-                f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
-                q_rep_.data = J_inv_ * f_rep_.data;
-                qC_dot_.data = qC_dot_.data + q_rep_.data;
-            }
-            // qC_dot_.data = q_att_.data + q_rep_.data;
+
 
             // *** 2.2 Compute model(M,C,G) ***
             id_solver_->JntToMass(q_, M_);
