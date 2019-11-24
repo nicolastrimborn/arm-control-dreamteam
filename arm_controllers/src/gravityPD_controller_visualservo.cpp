@@ -2,6 +2,7 @@
 #include <controller_interface/controller.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <control_toolbox/pid.h>
+
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -22,14 +23,23 @@
 #include <kdl/chaindynparam.hpp>              // inverse dynamics
 
 #include <boost/scoped_ptr.hpp>
+
 #include <tf/transform_listener.h>
 #include <boost/lexical_cast.hpp>
 #include <std_msgs/String.h>
+
+#include "arm_controllers/ControllerJointState.h"
+
+
 #define PI 3.141592
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
+
+//DONE : Publish data for plotting
+//TODO : Improve publishing performance using passivity controller example
+//TODO : Tune Gains
 
 namespace arm_controllers
 {
@@ -39,37 +49,32 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n)
     {
         loop_count_ = 0;
-        // ********* 1. Get joint name / gain from the parameter server *********
-        // 1.1 Joint Name
-        if (!n.getParam("joints", joint_names_))
-        {
-            ROS_ERROR("Could not find joint name");
-            return false;
-        }
-        n_joints_ = joint_names_.size();
-
+        // Populate Controller Gain Names
         state_names_.push_back("x");
         state_names_.push_back("y");
         state_names_.push_back("z");
         state_names_.push_back("roll");
         state_names_.push_back("pitch");
         state_names_.push_back("yaw");
-
-        if (n_joints_ == 0)
-        {
-            ROS_ERROR("List of joint names is empty.");
+        
+        // ********* 1. Get joint name / gain from the parameter server *********
+        // 1.1 Joint Name
+        if (!n.getParam("joints", joint_names_)) {
+            ROS_ERROR("Could not find joint name");
             return false;
         }
-        else
-        {
+        n_joints_ = joint_names_.size();
+        if (n_joints_ == 0) {
+            ROS_ERROR("List of joint names is empty.");
+            return false;
+        } else {
             ROS_INFO("Found %d joint names", n_joints_);
             for (int i = 0; i < n_joints_; i++)
             {
                 ROS_INFO("%s", joint_names_[i].c_str());
             }
         }
-
-        // // 1.2.1 Joint Controller
+        // Joint Gains
         Kp_.resize(n_joints_);
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
@@ -80,21 +85,16 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         {
             ROS_ERROR("Failed to parse urdf file");
             return false;
-        }
-        else
-        {
+        } else {
             ROS_INFO("Found robot_description");
         }
 
         // 3. ********* Get the joint object to use in the realtime loop [Joint Handle, URDF] *********
         for (int i = 0; i < n_joints_; i++)
         {
-            try
-            {
+            try {
                 joints_.push_back(hw->getHandle(joint_names_[i]));
-            }
-            catch (const hardware_interface::HardwareInterfaceException &e)
-            {
+            } catch (const hardware_interface::HardwareInterfaceException &e) {
                 ROS_ERROR_STREAM("Exception thrown: " << e.what());
                 return false;
             }
@@ -114,9 +114,7 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         {
             ROS_ERROR("Failed to construct kdl tree");
             return false;
-        }
-        else
-        {
+        } else {
             ROS_INFO("Constructed kdl tree");
         }
 
@@ -147,41 +145,38 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
                 ROS_ERROR_STREAM("    " << (*it).first);
 
             return false;
-        }
-        else
-        {
+        } else {
             ROS_INFO("Got kdl chain");
         }
 
-        // 4.3 inverse dynamics solver 초기화
-        gravity_ = KDL::Vector::Zero(); // ?
-        gravity_(2) = -9.81;            // 0: x-axis 1: y-axis 2: z-axis
+        // 4.3 inverse dynamics solver 
+        gravity_ = KDL::Vector::Zero(); 
+        gravity_(2) = -9.81;            
 
         id_solver_.reset(new KDL::ChainDynParam(kdl_chain_, gravity_));
-
         // 4.4 jacobian solver 초기화
         jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
-
         // 4.5 forward kinematics solver 초기화
         fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
 
         // ********* 5. 각종 변수 초기화 *********
-
         // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
-
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
-
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
         // x_cmd_.data(0) = 0.0;
         // x_cmd_.data(1) = 0.0;
         // x_cmd_.data(2) = 0.80;
 
-        x_est_.data = Eigen::VectorXd::Zero(num_taskspace+1);
-        x_est_.data(0) = 0.6;
-        x_est_.data(2) = 0.5;
 
+        /* Initial Starting Position */
+        x_est_.data = Eigen::VectorXd::Zero(num_taskspace+1);
+        //Position
+        x_est_.data(0) = 0.6;
+        x_est_.data(1) = 0.;
+        x_est_.data(2) = 0.5;
+        // Orientation
         quat.setRPY(0, PI/2, 0);
         x_est_.data(3) = quat[0];
         x_est_.data(4) = quat[1];
@@ -193,9 +188,13 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             ex_(i) = 0;
         }
 
-         // PIDS////////////////////////////////////////////////////////////////
+        // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
+        J_.resize(kdl_chain_.getNrOfJoints());
+        M_.resize(kdl_chain_.getNrOfJoints());
+        C_.resize(kdl_chain_.getNrOfJoints());
+        G_.resize(kdl_chain_.getNrOfJoints());
 
-        // pids
+         /* PID Initialise, enables adjustment with dynamic reconfigure */
         pids_.resize(n_joints_);
         for (size_t i=0; i<n_joints_; i++)
         {
@@ -207,27 +206,39 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
             }
         }
 
-        /////////////////////////////////////////////////////////////////////////
-
-        // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
-        J_.resize(kdl_chain_.getNrOfJoints());
-        M_.resize(kdl_chain_.getNrOfJoints());
-        C_.resize(kdl_chain_.getNrOfJoints());
-        G_.resize(kdl_chain_.getNrOfJoints());
-
+        
 
         // ********* 6. ROS 명령어 *********
         // 6.1 publisher
-        pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
-
-        pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
+        // pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
+        // pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
         // 6.2 subsriber
         sub = n.subscribe("command", 1000, &GravityPD_Controller_VisualServo::commandCB, this);
-        
         //Visual servo camera subscriber
         cam_sub = n.subscribe("/aruco_single/pose", 1000, &GravityPD_Controller_VisualServo::camPoseCB, this);
-
         
+        // start realtime state publisher
+			controller_state_pub_.reset(
+				new realtime_tools::RealtimePublisher
+                    <arm_controllers::ControllerJointState>(n, "state", 1));
+
+        // // Initialise publish message
+        for (size_t i=0; i<n_joints_; i++)
+        {
+            controller_state_pub_->msg_.name.push_back(joint_names_[i]);
+            controller_state_pub_->msg_.command.push_back(0.0);
+            controller_state_pub_->msg_.command_dot.push_back(0.0);
+            controller_state_pub_->msg_.state.push_back(0.0);
+            controller_state_pub_->msg_.state_dot.push_back(0.0);
+            controller_state_pub_->msg_.error.push_back(0.0);
+            controller_state_pub_->msg_.error_dot.push_back(0.0);
+            controller_state_pub_->msg_.error_taskspace.push_back(0.0);
+            controller_state_pub_->msg_.desired_pose.push_back(0.0);
+            controller_state_pub_->msg_.actual_pose.push_back(0.0);
+            controller_state_pub_->msg_.effort_command.push_back(0.0);
+            controller_state_pub_->msg_.effort_feedforward.push_back(0.0);
+            controller_state_pub_->msg_.effort_feedback.push_back(0.0);
+        }
         return true;
     }
 
@@ -252,8 +263,6 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
     void camPoseCB(const geometry_msgs::PoseStamped &msg)
     {
             ros::Rate rate(10.0);
-            
-            
             //ROS_INFO("chickenfoot");
             try{
                 tflistener.lookupTransform("/world", "/camera_frame_desired",
@@ -264,26 +273,24 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
                 ros::Duration(1.0).sleep();
             }
             
-             x_est_(0) = stf.getOrigin().x();
-             x_est_(1) = stf.getOrigin().y();
-             x_est_(2) = stf.getOrigin().z();
-             x_est_(3) = stf.getRotation().x();
-             x_est_(4) = stf.getRotation().y();
-             x_est_(5) = stf.getRotation().z();
-             x_est_(6) = stf.getRotation().w();
-             rate.sleep();
+            x_est_(0) = stf.getOrigin().x();
+            x_est_(1) = stf.getOrigin().y();
+            x_est_(2) = stf.getOrigin().z();
+            x_est_(3) = stf.getRotation().x();
+            x_est_(4) = stf.getRotation().y();
+            x_est_(5) = stf.getRotation().z();
+            x_est_(6) = stf.getRotation().w();
+            rate.sleep();
     }
 
     void starting(const ros::Time &time)
     {
         t = 0.0;
-         // 0.2 joint state
-        // for (int i = 0; i < n_joints_; i++)
-        // {
-        //     q_(i) = joints_[i].getPosition();
-        //     qdot_(i) = joints_[i].getVelocity();
-        // }
-
+        for(size_t i=0; i<n_joints_; i++) 
+        {
+            q_(i) = joints_[i].getPosition();
+            qdot_(i) = joints_[i].getVelocity();
+        }
         
         ROS_INFO("Starting Gravity Compensation and PD Controller");
     }
@@ -309,58 +316,104 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
         fk_pos_solver_->JntToCart(q_, x_);
         xdot_ = J_.data * qdot_.data;
 
-         // ********* 1. Desired Trajecoty in Task Space *********
-           xd_.p(0) = x_est_(0);
-           xd_.p(1) = x_est_(1);
-           xd_.p(2) = x_est_(2);
+        // ********* 1. Desired Trajecoty in Task Space *********
+        // Position
+        xd_.p(0) = x_est_(0);
+        xd_.p(1) = x_est_(1);
+        xd_.p(2) = x_est_(2);
+        // Orientation
+        quat = tf::Quaternion( x_est_(3),  x_est_(4),  x_est_(5),  x_est_(6));
+        tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+        xd_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
 
-                  quat = tf::Quaternion( x_est_(3),  x_est_(4),  x_est_(5),  x_est_(6));
-                  tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+        // ********* 2. Motion Controller in Joint Space*********
+        // Error Definition in Task Space
+        ex_temp_ = diff(x_, xd_);
 
-                  xd_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
+        ex_(0) = ex_temp_(0);
+        ex_(1) = ex_temp_(1);
+        ex_(2) = ex_temp_(2);
+        ex_(3) = ex_temp_(3);
+        ex_(4) = ex_temp_(4);
+        ex_(5) = ex_temp_(5);
 
-                  // ********* 2. Motion Controller in Joint Space*********
-                  // *** 2.0 Error Definition in Task Space ***
-                  ex_temp_ = diff(x_, xd_);
+        // *** 2.2 Compute model(M,C,G) ***
+        id_solver_->JntToMass(q_, M_);
+        id_solver_->JntToCoriolis(q_, qdot_, C_);
+        id_solver_->JntToGravity(q_, G_);
 
-                  ex_(0) = ex_temp_(0);
-                  ex_(1) = ex_temp_(1);
-                  ex_(2) = ex_temp_(2);
-                  ex_(3) = ex_temp_(3);
-                  ex_(4) = ex_temp_(4);
-                  ex_(5) = ex_temp_(5);
+        // *** 2.3 Apply Torque Command to Actuator ***
 
-                  // *** 2.2 Compute model(M,C,G) ***
-                  id_solver_->JntToMass(q_, M_);
-                  id_solver_->JntToCoriolis(q_, qdot_, C_);
-                  id_solver_->JntToGravity(q_, G_);
+        // ISHIRA: Manipulation
+        for (int i = 0; i < n_joints_; i++)
+        {
+            Kp_(i) = pids_[i].getGains().p_gain_;
+            Kd_(i) = pids_[i].getGains().d_gain_;
+            Ki_(i) = pids_[i].getGains().i_gain_;
+        }
 
-                  // *** 2.3 Apply Torque Command to Actuator ***
+        aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(ex_)-Kd_.data.cwiseProduct(xdot_));
+        tau_d_.data = aux_d_.data + G_.data;
 
-                  // ISHIRA: Manipulation
-                  for (int i = 0; i < n_joints_; i++)
-                  {
-                      Kp_(i) = pids_[i].getGains().p_gain_;
-                      Kd_(i) = pids_[i].getGains().d_gain_;
-                      Ki_(i) = pids_[i].getGains().i_gain_;
-                  }
+        for (int i = 0; i < n_joints_; i++)
+        {
+            joints_[i].setCommand(tau_d_(i));
+        }
 
-                  aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(ex_)-Kd_.data.cwiseProduct(xdot_));
-                  tau_d_.data = aux_d_.data + G_.data;
+        // call save/print data at 100hz
+        // if (loop_count_ % 10 == 0) {
+        //     // ********* 3. data 저장 *********
+        //     //save_data();
+        //     // ********* 4. state 출력 *********
+        //     //print_state();
+        // }
 
-                  for (int i = 0; i < n_joints_; i++)
-                  {
-                      joints_[i].setCommand(tau_d_(i));
-                  }
+        // publish
+        if (loop_count_ % 10 == 0)
+        {
+            if (controller_state_pub_->trylock())
+            {
+                controller_state_pub_->msg_.header.stamp = time;
+                for(int i=0; i<n_joints_; i++)
+                {
+                    /* Joint Space*/
+                    //controller_state_pub_->msg_.command[i] = R2D*q_cmd_(i);
+                    //controller_state_pub_->msg_.command_dot[i] = R2D*qdot_cmd_(i);
+                    controller_state_pub_->msg_.state[i] = R2D*q_(i);
+                    controller_state_pub_->msg_.state_dot[i] = R2D*qdot_(i);
+                    // controller_state_pub_->msg_.error[i] = R2D*q_error_(i);
+                    // controller_state_pub_->msg_.error_dot[i] = R2D*q_error_dot_(i);
+                    // controller_state_pub_->msg_.effort_command[i] = tau_cmd_(i);
+                    //controller_state_pub_->msg_.effort_feedback[i] = tau_cmd_(i) - //controller_state_pub_->msg_.effort_feedforward[i];
 
-                  if (loop_count_ % 1 == 0)
-                  {
-                      // ********* 3. data 저장 *********
-                      save_data();
+                    
+                }
+                // Task Space x,y,z (in mm) roll, pitch, yaw (in deg)
+                //Position
+                for(int i=0; i<3; i++) {
+                    controller_state_pub_->msg_.error_taskspace[i] = ex_(i) * 1000;
+                    controller_state_pub_->msg_.desired_pose[i] = xd_.p(i);
+                    controller_state_pub_->msg_.actual_pose[i] = x_.p(i);   
+                    
+                }   
+                //Orientation
+                for(int i=3; i<6; i++) {
+                    controller_state_pub_->msg_.error_taskspace[i] = R2D * ex_(i);
+                }
+                double a_roll, a_pitch, a_yaw, d_roll, d_pitch, d_yaw;
+                xd_.M.GetEulerZYX(d_yaw, d_pitch, d_roll);
+                x_.M.GetEulerZYX(a_yaw, a_pitch, a_roll);
+                controller_state_pub_->msg_.desired_pose[3] = R2D * d_roll;
+                controller_state_pub_->msg_.desired_pose[4] = R2D * d_pitch;
+                controller_state_pub_->msg_.desired_pose[5] = R2D * d_yaw;
+                controller_state_pub_->msg_.actual_pose[3] = R2D * a_roll;
+                controller_state_pub_->msg_.actual_pose[4] = R2D * a_pitch;
+                controller_state_pub_->msg_.actual_pose[5] = R2D * a_yaw;
 
-                      // ********* 4. state 출력 *********
-                      print_state();
-                  }
+                controller_state_pub_->unlockAndPublish();
+            }
+        }
+        // Loop Counter Variable
         loop_count_++;
     }
 
@@ -530,6 +583,12 @@ private:
     // ros publisher
     ros::Publisher pub_q_;
     ros::Publisher pub_SaveData_;
+
+    // Realtime safe publisher
+    boost::scoped_ptr<
+			realtime_tools::RealtimePublisher<
+				arm_controllers::ControllerJointState> > controller_state_pub_;
+
 
     // ros subsciber
     ros::Subscriber sub;

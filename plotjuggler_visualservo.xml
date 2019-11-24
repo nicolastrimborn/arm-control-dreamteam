@@ -1,0 +1,221 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root version="2.3.8">
+ <tabbed_widget parent="main_window" name="Main Window">
+  <plotmatrix tab_name="actual vs desired_TS" columns="2" rows="3">
+   <plot col="0" row="0">
+    <range bottom="0.685710" left="0.000000" right="10.000000" top="0.686545"/>
+    <limitY/>
+    <curve R="31" G="119" B="180" name="/elfin/gravityPD_controller_visualservo/state/actual_pose.0" custom_transform="noTransform"/>
+    <curve R="255" G="127" B="14" name="/elfin/gravityPD_controller_visualservo/state/desired_pose.0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="1">
+    <range bottom="0.590581" left="0.000000" right="10.000000" top="0.596946"/>
+    <limitY/>
+    <curve R="26" G="201" B="56" name="/elfin/gravityPD_controller_visualservo/state/actual_pose.2" custom_transform="noTransform"/>
+    <curve R="148" G="103" B="189" name="/elfin/gravityPD_controller_visualservo/state/desired_pose.2" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="2">
+    <range bottom="-0.100000" left="0.000000" right="10.000000" top="0.100000"/>
+    <limitY/>
+    <curve R="214" G="39" B="40" name="/elfin/gravityPD_controller_visualservo/state/actual_pose.4" custom_transform="noTransform"/>
+    <curve R="31" G="119" B="180" name="/elfin/gravityPD_controller_visualservo/state/desired_pose.4" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="0">
+    <range bottom="-0.001740" left="0.000000" right="10.000000" top="0.004614"/>
+    <limitY/>
+    <curve R="214" G="39" B="40" name="/elfin/gravityPD_controller_visualservo/state/actual_pose.1" custom_transform="noTransform"/>
+    <curve R="241" G="76" B="193" name="/elfin/gravityPD_controller_visualservo/state/desired_pose.1" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="1">
+    <range bottom="-0.100000" left="0.000000" right="10.000000" top="0.100000"/>
+    <limitY/>
+    <curve R="23" G="190" B="207" name="/elfin/gravityPD_controller_visualservo/state/actual_pose.3" custom_transform="noTransform"/>
+    <curve R="188" G="189" B="34" name="/elfin/gravityPD_controller_visualservo/state/desired_pose.3" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="2">
+    <range bottom="-0.100000" left="0.000000" right="10.000000" top="0.100000"/>
+    <limitY/>
+    <curve R="26" G="201" B="56" name="/elfin/gravityPD_controller_visualservo/state/actual_pose.5" custom_transform="noTransform"/>
+    <curve R="255" G="127" B="14" name="/elfin/gravityPD_controller_visualservo/state/desired_pose.5" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <plotmatrix tab_name="Errors_TS" columns="2" rows="2">
+   <plot col="0" row="0">
+    <range bottom="-0.018792" left="0.000000" right="10.000000" top="0.703728"/>
+    <limitY/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="1">
+    <range bottom="-0.100000" left="-26.420000" right="-21.400000" top="0.100000"/>
+    <limitY/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="0">
+    <range bottom="-0.021216" left="0.000000" right="10.000000" top="0.046751"/>
+    <limitY/>
+    <curve R="23" G="190" B="207" name="/elfin/gravityPD_controller_visualservo/state/error_taskspace.0" custom_transform="noTransform"/>
+    <curve R="188" G="189" B="34" name="/elfin/gravityPD_controller_visualservo/state/error_taskspace.1" custom_transform="noTransform"/>
+    <curve R="31" G="119" B="180" name="/elfin/gravityPD_controller_visualservo/state/error_taskspace.2" custom_transform="noTransform"/>
+    <transform value="Custom::noTransform"/>
+   </plot>
+   <plot col="1" row="1">
+    <range bottom="-0.487196" left="0.000000" right="10.000000" top="1.865078"/>
+    <limitY/>
+    <curve R="214" G="39" B="40" name="/elfin/gravityPD_controller_visualservo/state/error_taskspace.3" custom_transform="noTransform"/>
+    <curve R="26" G="201" B="56" name="/elfin/gravityPD_controller_visualservo/state/error_taskspace.4" custom_transform="noTransform"/>
+    <curve R="255" G="127" B="14" name="/elfin/gravityPD_controller_visualservo/state/error_taskspace.5" custom_transform="noTransform"/>
+    <transform value="Custom::noTransform"/>
+   </plot>
+  </plotmatrix>
+  <plotmatrix tab_name="Joint_Space_Pos" columns="2" rows="3">
+   <plot col="0" row="0">
+    <range bottom="2.483674" left="0.000000" right="10.000000" top="2.778075"/>
+    <limitY/>
+    <curve R="241" G="76" B="193" name="/elfin/gravityPD_controller_visualservo/state/state.0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="1">
+    <range bottom="17.758955" left="0.000000" right="10.000000" top="19.111387"/>
+    <limitY/>
+    <curve R="23" G="190" B="207" name="/elfin/gravityPD_controller_visualservo/state/state.2" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="2">
+    <range bottom="-29.809335" left="0.000000" right="10.000000" top="-28.732161"/>
+    <limitY/>
+    <curve R="31" G="119" B="180" name="/elfin/gravityPD_controller_visualservo/state/state.4" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="0">
+    <range bottom="-41.813036" left="0.000000" right="10.000000" top="-41.192660"/>
+    <limitY/>
+    <curve R="148" G="103" B="189" name="/elfin/gravityPD_controller_visualservo/state/state.1" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="1">
+    <range bottom="171.941004" left="0.000000" right="10.000000" top="172.730182"/>
+    <limitY/>
+    <curve R="188" G="189" B="34" name="/elfin/gravityPD_controller_visualservo/state/state.3" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="2">
+    <range bottom="-173.543604" left="0.000000" right="10.000000" top="-172.761696"/>
+    <limitY/>
+    <curve R="214" G="39" B="40" name="/elfin/gravityPD_controller_visualservo/state/state.5" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <plotmatrix tab_name="Joint_Space_Vel" columns="2" rows="3">
+   <plot col="0" row="0">
+    <range bottom="-2.171030" left="0.000000" right="10.000000" top="0.227099"/>
+    <limitY/>
+    <curve R="26" G="201" B="56" name="/elfin/gravityPD_controller_visualservo/state/state_dot.0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="1">
+    <range bottom="-0.449110" left="0.000000" right="10.000000" top="0.000198"/>
+    <limitY/>
+    <curve R="241" G="76" B="193" name="/elfin/gravityPD_controller_visualservo/state/state_dot.2" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="0" row="2">
+    <range bottom="-3.572633" left="0.000000" right="10.000000" top="1.602338"/>
+    <limitY/>
+    <curve R="23" G="190" B="207" name="/elfin/gravityPD_controller_visualservo/state/state_dot.4" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="0">
+    <range bottom="-0.941870" left="0.000000" right="10.000000" top="0.465633"/>
+    <limitY/>
+    <curve R="255" G="127" B="14" name="/elfin/gravityPD_controller_visualservo/state/state_dot.1" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="1">
+    <range bottom="-0.598758" left="0.000000" right="10.000000" top="2.379011"/>
+    <limitY/>
+    <curve R="148" G="103" B="189" name="/elfin/gravityPD_controller_visualservo/state/state_dot.3" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot col="1" row="2">
+    <range bottom="-1.819921" left="0.000000" right="10.000000" top="1.294380"/>
+    <limitY/>
+    <curve R="188" G="189" B="34" name="/elfin/gravityPD_controller_visualservo/state/state_dot.5" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <currentPlotMatrix index="2"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="1"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <!-- - - - - - - - - - - - - - - -->
+ <Plugins>
+  <plugin ID="DataLoad CSV">
+   <default time_axis=""/>
+  </plugin>
+  <plugin ID="DataLoad ROS bags">
+   <use_header_stamp value="false"/>
+   <use_renaming_rules value="true"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+  </plugin>
+  <plugin ID="DataLoad ULog"/>
+  <plugin ID="ROS Topic Subscriber">
+   <use_header_stamp value="false"/>
+   <use_renaming_rules value="true"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+  </plugin>
+  <plugin status="idle" ID="ROS /rosout Visualization"/>
+  <plugin status="idle" ID="ROS Topic Re-Publisher"/>
+ </Plugins>
+ <!-- - - - - - - - - - - - - - - -->
+ <previouslyLoaded_Datafiles/>
+ <previouslyLoaded_Streamer name="ROS Topic Subscriber"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <customMathEquations/>
+ <snippets>
+  <snippet name="1st_derivative">
+   <global>var prevX = 0
+var prevY = 0</global>
+   <equation>dx = time - prevX
+dy = value - prevY
+prevX = time
+prevY = value
+
+return dy/dx</equation>
+  </snippet>
+  <snippet name="1st_order_lowpass">
+   <global>var prevY = 0
+var alpha = 0.1</global>
+   <equation>prevY = alpha * value + (1.-alpha) * prevY
+
+return prevY</equation>
+  </snippet>
+  <snippet name="sum_A_B">
+   <global></global>
+   <equation>return $$PLOT_A$$ + $$PLOT_B$$</equation>
+  </snippet>
+  <snippet name="yaw_from_quaternion">
+   <global>// source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+function quaternionToYaw(x, y, z, w)
+{
+  // yaw (z-axis rotation)
+  t1 = 2.0 * (w * z + x * y);
+  t2 = 1.0 - 2.0 * (y * y + z * z);
+  yaw = Math.atan2(t1, t2);
+
+  return yaw
+}</global>
+   <equation>return quaternionToYaw(x, y, z, w);</equation>
+  </snippet>
+ </snippets>
+ <!-- - - - - - - - - - - - - - - -->
+</root>
+
