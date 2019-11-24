@@ -78,4 +78,11 @@
     </description>
   </class>
 
+  <class name="arm_controllers/TableAvoidWhole_Controller" type="arm_controllers::TableAvoidWhole_Controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Table Obstacle avoidance Controller
+    </description>
+  </class>
+
+
 </library>

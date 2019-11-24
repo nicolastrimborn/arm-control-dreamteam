@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find elfin_gazebo)/launch/elfin3_empty_world.launch" />
+  <include file="$(find elfin_control)/launch/table_avoid_whole_control.launch" />
+</launch>
