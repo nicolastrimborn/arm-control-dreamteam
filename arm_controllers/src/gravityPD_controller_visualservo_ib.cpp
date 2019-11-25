@@ -14,6 +14,8 @@
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Quaternion.h"
 #include "tf/transform_datatypes.h"
+#include "fiducial_msgs/FiducialArray.h"
+#include "fiducial_msgs/FiducialTransformArray.h"
 
 // from kdl packages
 #include <kdl/tree.hpp>
@@ -215,7 +217,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         // 6.2 subsriber
         sub = n.subscribe("command", 1000, &GravityPD_Controller_VisualServo_IB::commandCB, this);
         //Visual servo camera subscriber
-        cam_sub = n.subscribe("/aruco_single/pose", 1000, &GravityPD_Controller_VisualServo_IB::camPoseCB, this);
+        cam_sub = n.subscribe("/fiducial_vertices", 1000, &GravityPD_Controller_VisualServo_IB::camPoseCB, this);
         
         // start realtime state publisher
 			controller_state_pub_.reset(
@@ -260,27 +262,42 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
     }
     
     
-    void camPoseCB(const geometry_msgs::PoseStamped &msg)
+    void camPoseCB(const fiducial_msgs::FiducialArray &msg)
     {
-            ros::Rate rate(10.0);
-            //ROS_INFO("chickenfoot");
-            try{
-                tflistener.lookupTransform("/world", "/camera_frame_desired",
-                                        ros::Time(0), stf);
-            }
-                catch (tf::TransformException ex){
-                ROS_ERROR("%s",ex.what());
-                ros::Duration(1.0).sleep();
-            }
+    
+        std::map<int, std::vector<double>> points;
+        for (std::size_t i = 0; i != msg.fiducials.size(); ++i) {
+            // access element as v[i]
+            points[0].push_back(msg.fiducials[i].x0);
+            points[0].push_back(msg.fiducials[i].y0);
+            points[1].push_back(msg.fiducials[i].x1);
+            points[1].push_back(msg.fiducials[i].y1);
+            points[2].push_back(msg.fiducials[i].x2);
+            points[2].push_back(msg.fiducials[i].y2);
+            points[3].push_back(msg.fiducials[i].x3);
+            points[3].push_back(msg.fiducials[i].y3);
+
+            // any code including continue, break, return
+        }
+
+
+            // try{
+            //     tflistener.lookupTransform("/world", "/camera_frame_desired",
+            //                             ros::Time(0), stf);
+            // }
+            //     catch (tf::TransformException ex){
+            //     ROS_ERROR("%s",ex.what());
+            //     ros::Duration(1.0).sleep();
+            // }
             
-            x_est_(0) = stf.getOrigin().x();
-            x_est_(1) = stf.getOrigin().y();
-            x_est_(2) = stf.getOrigin().z();
-            x_est_(3) = stf.getRotation().x();
-            x_est_(4) = stf.getRotation().y();
-            x_est_(5) = stf.getRotation().z();
-            x_est_(6) = stf.getRotation().w();
-            rate.sleep();
+            // x_est_(0) = stf.getOrigin().x();
+            // x_est_(1) = stf.getOrigin().y();
+            // x_est_(2) = stf.getOrigin().z();
+            // x_est_(3) = stf.getRotation().x();
+            // x_est_(4) = stf.getRotation().y();
+            // x_est_(5) = stf.getRotation().z();
+            // x_est_(6) = stf.getRotation().w();
+            // rate.sleep();
     }
 
     void starting(const ros::Time &time)

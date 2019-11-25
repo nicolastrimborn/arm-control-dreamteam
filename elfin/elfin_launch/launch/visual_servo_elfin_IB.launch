@@ -5,6 +5,6 @@
   
   <!--<include file="$(find aruco_hand_eye)/launch/aruco_hand_eye_elfin.launch" />-->
   <include file="$(find elfin_control)/launch/gravityPD_control_visualservo_IB.launch" />
-  <include file="$(find aruco_ros)/launch/single.launch" />
+  <include file="$(find aruco_detect)/launch/aruco_detect.launch" />
 
 </launch>
