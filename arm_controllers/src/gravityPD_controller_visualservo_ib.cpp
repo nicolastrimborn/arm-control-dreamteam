@@ -222,7 +222,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
 				new realtime_tools::RealtimePublisher
                     <arm_controllers::ControllerJointState>(n, "state", 1));
 
-        // // Initialise publish message
+        // Initialise publish message
         for (size_t i=0; i<n_joints_; i++)
         {
             controller_state_pub_->msg_.name.push_back(joint_names_[i]);
