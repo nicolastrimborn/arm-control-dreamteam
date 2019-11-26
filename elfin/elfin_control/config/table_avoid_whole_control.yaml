@@ -22,16 +22,17 @@ elfin:
         - elfin_end_link
       gains:
         x:
-          pid: {p: 100.0, i: 0, d: 20.0}
+          pid: {p: 200.0, i: 0, d: 20.0}
         y:
-          pid: {p: 100.0, i: 0, d: 20.0}
+          pid: {p: 200.0, i: 0, d: 20.0}
         z:
-          pid: {p: 100.0, i: 0, d: 20.0}
+          pid: {p: 200.0, i: 0, d: 20.0}
         roll:
-          pid: {p: 100.0, i: 0, d: 20.0}
+          pid: {p: 200.0, i: 0, d: 20.0}
         pitch:
-          pid: {p: 100.0, i: 0, d: 20.0}
+          pid: {p: 200.0, i: 0, d: 20.0}
         yaw:
-          pid: {p: 100.0, i: 0, d: 20.0}
+          pid: {p: 200.0, i: 0, d: 20.0}
+
       root_link: world
       tip_link: elfin_end_link

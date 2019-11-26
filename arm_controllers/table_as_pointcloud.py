@@ -23,7 +23,7 @@ def table_points():
     dz = np.float32(dz)
     particles = np.empty((125000,3))
     particles_x = np.linspace(0.0,0.4)
-    particles_y = np.linspace(-0.6,0.-0.2)
+    particles_y = np.linspace(-0.7,0.-0.3)
     particles_z = np.linspace(0.2,0.25)
 
     x,y,z = np.meshgrid(particles_x, particles_y, particles_z, indexing='xy')

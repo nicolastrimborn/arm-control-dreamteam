@@ -33,8 +33,8 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
-#define Q_Star 0.05
-#define Rep_Gradient 320
+#define Q_Star 0.1
+#define Rep_Gradient 160
 
 namespace arm_controllers
 {
@@ -247,13 +247,13 @@ namespace arm_controllers
             x_obs_(2) = 10;
 
             particles_x[0] = 0.0;
-            particles_y[0] = -0.6;
+            particles_y[0] = -0.7;
             particles_z[0] = 0.2;
 
-            double step_x = 0.4/49;
-            double step_y = 0.4/49;
-            double step_z = 0.05/49;
-            for (size_t i = 0; i<49; i++){
+            double step_x = 0.4/99;
+            double step_y = 0.4/99;
+            double step_z = 0.05/99;
+            for (size_t i = 0; i<99; i++){
                 particles_x[i+1] = particles_x[i] + step_x;
                 particles_y[i+1] = particles_y[i] + step_y;
                 particles_z[i+1] = particles_z[i] + step_z;
@@ -399,9 +399,9 @@ namespace arm_controllers
                 // Pseudoinverse upto nth joint
                 pseudo_inverse(J_temp_.data, J_inv_temp);
                 dqc_ = 100;
-                for (int i=0; i<50; i++){
-                   for (int j=0; j<50; j++) {
-                       for (int k=0; k < 50; k++) {
+                for (int i=0; i<100; i++){
+                   for (int j=0; j<100; j++) {
+                       for (int k=0; k < 100; k++) {
                            double d_;
                            d_ = sqrt(pow(particles_x[i] - x_.p(0), 2) + pow(particles_y[j] - x_.p(1), 2) +
                                      pow(particles_z[k] - x_.p(2), 2));
@@ -648,9 +648,9 @@ namespace arm_controllers
         sensor_msgs::PointCloud2 particles_;
 
         double d_q;
-        double particles_x [50];
-        double particles_y [50];
-        double particles_z [50];
+        double particles_x [100];
+        double particles_y [100];
+        double particles_z [100];
 
         struct Table { double width, length, height;} table = {0.4,0.4,0.05};
     };

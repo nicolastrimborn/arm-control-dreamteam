@@ -627,7 +627,7 @@
               "keys": {
                 "publishers": {
                   "type": "repr",
-                  "repr": "u\"[{'topic_name': '/elfin/table_avoid_whole_controller/command', 'type_name': 'std_msgs/Float64MultiArray', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/table_avoid_whole_controller/command/data': '[0.1, -0.3, 0.5, 1.57, 0, 0]'}, 'publisher_id': 0, 'counter': 19}]\""
+                  "repr": "u\"[{'type_name': 'std_msgs/Float64MultiArray', 'topic_name': '/elfin/table_avoid_whole_controller/command', 'enabled': False, 'rate': 1.0, 'expressions': {u'/elfin/table_avoid_whole_controller/command/data': '[0.1, -0.2, .5, 1.57, 0, 0]'}, 'publisher_id': 0, 'counter': 49}]\""
                 }
               },
               "groups": {}
@@ -740,8 +740,8 @@
       "keys": {
         "geometry": {
           "type": "repr(QByteArray.hex)",
-          "repr(QByteArray.hex)": "QtCore.QByteArray('01d9d0cb00020000000004320000013e00000754000003fc000004320000015a00000754000003fc00000000000000000780')",
-          "pretty-print": "     2 > T   2 Z T       "
+          "repr(QByteArray.hex)": "QtCore.QByteArray('01d9d0cb0002000000000432000005b8000007540000087600000432000005d4000007540000087600000001000000000a00')",
+          "pretty-print": "     2   T v 2   T v     "
         },
         "state": {
           "type": "repr(QByteArray.hex)",
