@@ -34,4 +34,4 @@ elfin:
         yaw:
           pid: {p: 100.0, i: 0, d: 20.0}
       root_link: world
-      tip_link: elfin_link6
+      tip_link: elfin_end_link

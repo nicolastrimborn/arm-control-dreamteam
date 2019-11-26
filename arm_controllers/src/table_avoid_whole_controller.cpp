@@ -34,7 +34,7 @@
 #define SaveDataMax 49
 #define num_taskspace 6
 #define Q_Star 0.05
-#define Rep_Gradient 160
+#define Rep_Gradient 320
 
 namespace arm_controllers
 {
@@ -167,8 +167,8 @@ namespace arm_controllers
             // PIDS////////////////////////////////////////////////////////////////
 
             // pids
-            pids_.resize(n_joints_);
-            for (size_t i=0; i<n_joints_; i++)
+            pids_.resize(state_names_.size());
+            for (size_t i=0; i<state_names_.size(); i++)
             {
                 // Load PID Controller using gains set on parameter server
                 if (!pids_[i].init(ros::NodeHandle(n, "gains/" + state_names_[i] + "/pid")))
@@ -194,12 +194,12 @@ namespace arm_controllers
             fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
 
             // ********* 5. 각종 변수 초기화 *********
-
+            n_joints_ = kdl_chain_.getNrOfJoints();
             // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
             tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
 
             q_att_.data = Eigen::VectorXd::Zero(n_joints_);
-            f_rep_.data = Eigen::VectorXd::Zero(n_joints_);
+            f_rep_.data = Eigen::VectorXd::Zero(num_taskspace);
             q_rep_.data = Eigen::VectorXd::Zero(n_joints_);
             d_q_.data = Eigen::VectorXd::Zero(n_joints_);
 
@@ -239,6 +239,7 @@ namespace arm_controllers
             x_cmd_(0) = 0.1;
             x_cmd_(1) = -0.32;
             x_cmd_(2) = 0.7;
+            x_cmd_(3) = 0;
 
             x_obs_.data = Eigen::VectorXd::Zero(num_taskspace);
             x_obs_(0) = 10;
@@ -267,14 +268,14 @@ namespace arm_controllers
 
         void commandCB(const std_msgs::Float64MultiArrayConstPtr &msg)
         {
-            if (msg->data.size() != n_joints_)
+            if (msg->data.size() != state_names_.size())
             {
                 ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
                 return;
             }
             else
             {
-                for (size_t i = 0; i < n_joints_; i++)
+                for (size_t i = 0; i < state_names_.size(); i++)
                 {
                     x_cmd_(i) = msg->data[i];
                 }
@@ -331,8 +332,6 @@ namespace arm_controllers
 
             // ********* 1. Desired Trajecoty in Joint Space *********
             fk_pos_solver_->JntToCart(q_,x_);
-            printf("Butterfly");
-            ROS_INFO_STREAM(x_.p(3));
             // *** 1.1 Desired Trajectory in taskspace ***
             xd_.p(0) = x_cmd_(0);
             xd_.p(1) = x_cmd_(1);
@@ -350,26 +349,24 @@ namespace arm_controllers
 
             jnt_to_jac_solver_->JntToJac(q_, J_);
 
-            // *** 2.2 computing Jacobian transpose/inversion ***
+            // ********* 2. Calculating Potentials *********
+            // *** 2.0 Attractive Potential **
             J_inv_ = J_.data.inverse();
 
             aux_2_d_.data = Kp_.data.cwiseProduct(ex_);
 
             q_att_.data = J_inv_ * aux_2_d_.data;
-            // Repulsive
 
             qC_dot_.data = q_att_.data ;
-            //ROS_INFO_STREAM(kdl_chain_.getSegment(0).pose(0.0).p(3));
+
+            // *** 2.1 Repulsive Potential ***
             // FK for segments
-
-
-            printf("Tiger");
             for (int n=1; n<n_joints_+1; n++) {
                 Eigen::MatrixXd J_inv_temp;
                 std::string root_name, tip_name;
                 root_name = "world";
                 tip_name = link_names_[n];
-
+                // KDL chain from world to nth link
                 if (!kdl_tree_.getChain(root_name, tip_name, kdl_chain_temp_))
                 {
                     ROS_ERROR_STREAM("Failed to get KDL chain from tree: ");
@@ -386,17 +383,20 @@ namespace arm_controllers
 
                 }
                 int n_joints_temp_ = kdl_chain_temp_.getNrOfJoints();
+                // Current Joint coordinates upto nth joint
                 q_temp_.data = Eigen::VectorXd::Zero(n_joints_temp_);
                 for (int i = 0; i < n_joints_temp_; i++) {
                     q_temp_.data[i] = q_.data[i];
                 }
-
+                // FK upto nth joint
                 fk_pos_solver_temp_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_temp_));
                 fk_pos_solver_temp_->JntToCart(q_temp_,x_);
+                // Jacobian upto nth joint
                 jnt_to_jac_solver_temp_.reset(new KDL::ChainJntToJacSolver(kdl_chain_temp_));
                 J_temp_.resize(n_joints_temp_);
                 jnt_to_jac_solver_temp_->JntToJac(q_temp_, J_temp_);
                 printf("%i", n);
+                // Pseudoinverse upto nth joint
                 pseudo_inverse(J_temp_.data, J_inv_temp);
                 dqc_ = 100;
                 for (int i=0; i<50; i++){
@@ -424,35 +424,34 @@ namespace arm_controllers
                    for (int i=0; i<n_joints_temp_; i++){
                        qC_dot_.data[i] = qC_dot_.data[i] + q_temp_.data[i];
                    }
-                   //qC_dot_.data = qC_dot_.data + q_rep_.data;
                 }
 
             }
 
-
-           // *** 2.2 Compute model(M,C,G) ***
+            // ********* 3. Motion Controller in Joint Space*********
+           // *** 3.0 Compute model(M,C,G) ***
            id_solver_->JntToMass(q_, M_);
            id_solver_->JntToCoriolis(q_, qdot_, C_);
            id_solver_->JntToGravity(q_, G_);
 
-           // *** 2.3 Apply Torque Command to Actuator ***
+           // *** 3.2 Apply Torque Command to Actuator ***
            // ISHIRA: Stabilizing Linear Control
            eC_dot_.data = qC_dot_.data - qdot_.data;
            aux_d_.data = M_.data * (Kd_.data.cwiseProduct(eC_dot_.data)) ;
            comp_d_.data = C_.data.cwiseProduct(qdot_.data) + G_.data;
            tau_d_.data = aux_d_.data + comp_d_.data;
 
-           // ISHIRA: Manipulation
+           // *** 3.3 Manipulation ***
            for (int i = 0; i < n_joints_; i++)
            {
                joints_[i].setCommand(tau_d_(i));
                // joints_[i].setCommand(0.0);
            }
 
-           // ********* 3. data 저장 *********
+           // ********* 4. data 저장 *********
            // save_data();
 
-           // ********* 4. state 출력 *********
+           // ********* 5. state 출력 *********
            print_state();
         }
 
@@ -465,30 +464,6 @@ namespace arm_controllers
             // 1
             // Simulation time (unit: sec)
             SaveData_[0] = t;
-
-            // Desired position in joint space (unit: rad)
-            // SaveData_[1] = qd_(0);
-            // SaveData_[2] = qd_(1);
-            // SaveData_[3] = qd_(2);
-            // SaveData_[4] = qd_(3);
-            // SaveData_[5] = qd_(4);
-            // SaveData_[6] = qd_(5);
-            //
-            // // Desired velocity in joint space (unit: rad/s)
-            // SaveData_[7] = qd_dot_(0);
-            // SaveData_[8] = qd_dot_(1);
-            // SaveData_[9] = qd_dot_(2);
-            // SaveData_[10] = qd_dot_(3);
-            // SaveData_[11] = qd_dot_(4);
-            // SaveData_[12] = qd_dot_(5);
-            //
-            // // Desired acceleration in joint space (unit: rad/s^2)
-            // SaveData_[13] = qd_ddot_(0);
-            // SaveData_[14] = qd_ddot_(1);
-            // SaveData_[15] = qd_ddot_(2);
-            // SaveData_[16] = qd_ddot_(3);
-            // SaveData_[17] = qd_ddot_(4);
-            // SaveData_[18] = qd_ddot_(5);
 
             // Actual position in joint space (unit: rad)
             SaveData_[19] = q_(0);
@@ -505,30 +480,6 @@ namespace arm_controllers
             SaveData_[28] = qdot_(3);
             SaveData_[29] = qdot_(4);
             SaveData_[30] = qdot_(5);
-
-            // // Error position in joint space (unit: rad)
-            // SaveData_[31] = e_(0);
-            // SaveData_[32] = e_(1);
-            // SaveData_[33] = e_(2);
-            // SaveData_[34] = e_(3);
-            // SaveData_[35] = e_(4);
-            // SaveData_[36] = e_(5);
-            //
-            // // Error velocity in joint space (unit: rad/s)
-            // SaveData_[37] = e_dot_(0);
-            // SaveData_[38] = e_dot_(1);
-            // SaveData_[39] = e_dot_(3);
-            // SaveData_[40] = e_dot_(4);
-            // SaveData_[41] = e_dot_(5);
-            // SaveData_[42] = e_dot_(6);
-            //
-            // // Error intergal value in joint space (unit: rad*sec)
-            // SaveData_[43] = e_int_(0);
-            // SaveData_[44] = e_int_(1);
-            // SaveData_[45] = e_int_(2);
-            // SaveData_[46] = e_int_(3);
-            // SaveData_[47] = e_int_(4);
-            // SaveData_[48] = e_int_(5);
 
             // 2
             msg_qd_.data.clear();
@@ -563,37 +514,10 @@ namespace arm_controllers
             static int count = 0;
             if (count > 99)
             {
-                pubPolygon();
+                //pubPolygon();
                 printf("*********************************************************\n\n");
                 printf("*** Simulation Time (unit: sec)  ***\n");
                 printf("t = %f\n", t);
-                printf("\n");
-
-                // printf("*** Desired State in Joint Space (unit: deg) ***\n");
-                // printf("qd_(0): %f, ", qd_(0)*R2D);
-                // printf("qd_(1): %f, ", qd_(1)*R2D);
-                // printf("qd_(2): %f, ", qd_(2)*R2D);
-                // printf("qd_(3): %f, ", qd_(3)*R2D);
-                // printf("qd_(4): %f, ", qd_(4)*R2D);
-                // printf("qd_(5): %f\n", qd_(5)*R2D);
-                // printf("\n");
-
-                printf("*** Actual State in Joint Space (unit: deg) ***\n");
-                printf("q_(0): %f, ", q_(0) * R2D);
-                printf("q_(1): %f, ", q_(1) * R2D);
-                printf("q_(2): %f, ", q_(2) * R2D);
-                printf("q_(3): %f, ", q_(3) * R2D);
-                printf("q_(4): %f, ", q_(4) * R2D);
-                printf("q_(5): %f\n", q_(5) * R2D);
-                printf("\n");
-
-                printf("*** Commanded Position (unit: task space) ***\n");
-                printf("x_cmd_(0): %f, ", x_cmd_(0));
-                printf("x_cmd_(1): %f, ", x_cmd_(1));
-                printf("x_cmd_(2): %f, ", x_cmd_(2));
-                printf("x_cmd_(3): %f, ", x_cmd_(3));
-                printf("x_cmd_(4): %f, ", x_cmd_(4));
-                printf("x_cmd_(5): %f\n", x_cmd_(5));
                 printf("\n");
 
                 printf("*** Actual Position in Task Space (unit: m) ***\n");
@@ -601,18 +525,6 @@ namespace arm_controllers
                 printf("y: %f, ", x_.p(1));
                 printf("z: %f\n", x_.p(2));
                 printf("\n");
-
-                //
-                //
-                // printf("*** Joint Space Error (unit: deg)  ***\n");
-                // printf("%f, ", R2D * e_(0));
-                // printf("%f, ", R2D * e_(1));
-                // printf("%f, ", R2D * e_(2));
-                // printf("%f, ", R2D * e_(3));
-                // printf("%f, ", R2D * e_(4));
-                // printf("%f\n", R2D * e_(5));
-                printf("\n");
-
 
                 count = 0;
             }
