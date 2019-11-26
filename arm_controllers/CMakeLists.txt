@@ -17,7 +17,7 @@ generate_dynamic_reconfigure_options(
   )
 
 # message
-add_message_files(FILES ControllerJointState.msg)
+add_message_files(FILES ControllerJointState.msg VisualServoMsg.msg)
 generate_messages(DEPENDENCIES std_msgs)
 
 # include

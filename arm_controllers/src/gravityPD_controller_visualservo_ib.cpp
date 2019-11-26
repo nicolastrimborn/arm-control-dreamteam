@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "arm_controllers/ControllerJointState.h"
+#include "arm_controllers/VisualServoMsg.h"
 
 
 #define PI 3.141592
@@ -39,6 +40,7 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
+#define vs_numpoints 3
 #define Z 1
 
 
@@ -214,8 +216,6 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             }
         }
 
-        
-
         // ********* 6. ROS 명령어 *********
         // 6.1 publisher
         // pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
@@ -228,9 +228,13 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         cntlr_sub = n.subscribe("switch_control", 1000, &GravityPD_Controller_VisualServo_IB::cntlrSwitch, this);
         
         // start realtime state publisher
-			controller_state_pub_.reset(
-				new realtime_tools::RealtimePublisher
-                    <arm_controllers::ControllerJointState>(n, "state", 1));
+        controller_state_pub_.reset(
+            new realtime_tools::RealtimePublisher
+                <arm_controllers::ControllerJointState>(n, "state", 1));
+
+        visual_servo_pub_.reset(
+        new realtime_tools::RealtimePublisher
+            <arm_controllers::VisualServoMsg>(n, "visual_state", 1));
 
         // Initialise publish message
         for (size_t i=0; i<n_joints_; i++)
@@ -249,6 +253,22 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             controller_state_pub_->msg_.effort_feedforward.push_back(0.0);
             controller_state_pub_->msg_.effort_feedback.push_back(0.0);
         }
+        // Set Visual servo desired
+        sd_(0) = 288;
+        sd_(1) = 511;
+        sd_(2) = 266;
+        sd_(3) = 308;
+        sd_(4) = 469;
+        sd_(5) = 284;
+
+        // Initialise vs_message
+        visual_servo_pub_->msg_.xd0 = 0;
+        visual_servo_pub_->msg_.yd0 = 0;
+        visual_servo_pub_->msg_.xd1 = 0;
+        visual_servo_pub_->msg_.yd1 = 0;
+        visual_servo_pub_->msg_.xd2 = 0;
+        visual_servo_pub_->msg_.yd2 = 0;
+
         return true;
     }
 
@@ -270,7 +290,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
     // }
     
     void cntlrSwitch(const std_msgs::String::ConstPtr &msg){
-            ROS_INFO(msg->data.c_str());
+            // ROS_INFO(msg->data.c_str());
             if(strcmp(msg->data.c_str(),"switch_IB") == 0){
                 cntlr_flag = 1;
                 ROS_INFO("-----------------Controller Switched to Image Based Visual Servoing--------------------");
@@ -309,26 +329,6 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
                 J_L_(i+1,5) = -s_(i);
             }
         }
-
-
-
-            // try{
-            //     tflistener.lookupTransform("/world", "/camera_frame_desired",
-            //                             ros::Time(0), stf);
-            // }
-            //     catch (tf::TransformException ex){
-            //     ROS_ERROR("%s",ex.what());
-            //     ros::Duration(1.0).sleep();
-            // }
-            
-            // x_est_(0) = stf.getOrigin().x();
-            // x_est_(1) = stf.getOrigin().y();
-            // x_est_(2) = stf.getOrigin().z();
-            // x_est_(3) = stf.getRotation().x();
-            // x_est_(4) = stf.getRotation().y();
-            // x_est_(5) = stf.getRotation().z();
-            // x_est_(6) = stf.getRotation().w();
-            // rate.sleep();
     }
 
     void starting(const ros::Time &time)
@@ -399,20 +399,14 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
 
             aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(ex_)-Kd_.data.cwiseProduct(xdot_));
             tau_d_.data = aux_d_.data + G_.data;            
-        }else{
+        } else {
             J_transpose_ = J_L_.data.transpose();
             xdot_ = J_L_.data * qdot_.data;
             // ********* 2. Motion Controller in Joint Space*********
             // Error Definition in Task Space
-            sd_(0) = 288;
-            sd_(1) = 511;
-            sd_(2) = 266;
-            sd_(3) = 308;
-            sd_(4) = 469;
-            sd_(5) = 284;
-
+            
             es_temp_ = sd_ - s_;
-            // // convert to matrix
+            // convert to matrix
             es_(0) = es_temp_(0);
             es_(1) = es_temp_(1);
             es_(2) = es_temp_(2);
@@ -445,52 +439,35 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         // }
 
         // publish
-    //     if (loop_count_ % 10 == 0)
-    //     {
-    //         if (controller_state_pub_->trylock())
-    //         {
-    //             controller_state_pub_->msg_.header.stamp = time;
-    //             for(int i=0; i<n_joints_; i++)
-    //             {
-    //                 /* Joint Space*/
-    //                 //controller_state_pub_->msg_.command[i] = R2D*q_cmd_(i);
-    //                 //controller_state_pub_->msg_.command_dot[i] = R2D*qdot_cmd_(i);
-    //                 controller_state_pub_->msg_.state[i] = R2D*q_(i);
-    //                 controller_state_pub_->msg_.state_dot[i] = R2D*qdot_(i);
-    //                 // controller_state_pub_->msg_.error[i] = R2D*q_error_(i);
-    //                 // controller_state_pub_->msg_.error_dot[i] = R2D*q_error_dot_(i);
-    //                 // controller_state_pub_->msg_.effort_command[i] = tau_cmd_(i);
-    //                 //controller_state_pub_->msg_.effort_feedback[i] = tau_cmd_(i) - //controller_state_pub_->msg_.effort_feedforward[i];
-
-                    
-    //             }
-    //             // Task Space x,y,z (in mm) roll, pitch, yaw (in deg)
-    //             //Position
-    //             for(int i=0; i<3; i++) {
-    //                 // controller_state_pub_->msg_.error_taskspace[i] = ex_(i) * 1000;
-    //                 // controller_state_pub_->msg_.desired_pose[i] = xd_.p(i);
-    //                 // controller_state_pub_->msg_.actual_pose[i] = x_.p(i);   
-                    
-    //             }   
-    //             //Orientation
-    //             for(int i=3; i<6; i++) {
-    //                 // controller_state_pub_->msg_.error_taskspace[i] = R2D * ex_(i);
-    //             }
-    //             double a_roll, a_pitch, a_yaw, d_roll, d_pitch, d_yaw;
-    //             // xd_.M.GetEulerZYX(d_yaw, d_pitch, d_roll);
-    //             // x_.M.GetEulerZYX(a_yaw, a_pitch, a_roll);
-    //             controller_state_pub_->msg_.desired_pose[3] = R2D * d_roll;
-    //             controller_state_pub_->msg_.desired_pose[4] = R2D * d_pitch;
-    //             controller_state_pub_->msg_.desired_pose[5] = R2D * d_yaw;
-    //             controller_state_pub_->msg_.actual_pose[3] = R2D * a_roll;
-    //             controller_state_pub_->msg_.actual_pose[4] = R2D * a_pitch;
-    //             controller_state_pub_->msg_.actual_pose[5] = R2D * a_yaw;
-
-    //             controller_state_pub_->unlockAndPublish();
-    //         }
-    //     }
-    //     // Loop Counter Variable
-    //     loop_count_++;
+        if (loop_count_ % 10 == 0)
+        {
+            if (controller_state_pub_->trylock())
+            {
+                controller_state_pub_->msg_.header.stamp = time;
+                for(int i=0; i<n_joints_; i++)
+                {
+                    /* Joint Space*/
+                    controller_state_pub_->msg_.state[i] = R2D*q_(i);
+                    controller_state_pub_->msg_.state_dot[i] = R2D*qdot_(i);
+                }
+                controller_state_pub_->unlockAndPublish();
+            }
+            if (visual_servo_pub_->trylock())
+            {
+                visual_servo_pub_->msg_.header.stamp = time;
+                visual_servo_pub_->msg_.xd0 = sd_(0);
+                visual_servo_pub_->msg_.yd0 = sd_(1);
+                visual_servo_pub_->msg_.xd1 = sd_(2);
+                visual_servo_pub_->msg_.yd1 = sd_(3);
+                visual_servo_pub_->msg_.xd2 = sd_(4);
+                visual_servo_pub_->msg_.yd2 = sd_(5);
+                // visual_servo_pub_->msg_.xd_3 = sd_(6);
+                // visual_servo_pub_->msg_.yd_3 = sd_(7);
+                visual_servo_pub_->unlockAndPublish();
+            }
+        }
+        // Loop Counter Variable
+        loop_count_++;
     }
 
     void stopping(const ros::Time &time)
@@ -675,6 +652,10 @@ private:
     boost::scoped_ptr<
 			realtime_tools::RealtimePublisher<
 				arm_controllers::ControllerJointState> > controller_state_pub_;
+
+    boost::scoped_ptr<
+        realtime_tools::RealtimePublisher<
+            arm_controllers::VisualServoMsg> > visual_servo_pub_;
     
     // ros subsciber
     ros::Subscriber cntlr_sub;
