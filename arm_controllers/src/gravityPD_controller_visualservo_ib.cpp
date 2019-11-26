@@ -232,8 +232,8 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         // Initialise publish message for controller_state_pub_,  allocate memory for each joint
         for (size_t i=0; i<n_joints_; i++)
         {
-            controller_state_pub_->msg_.command.push_back(0.0);
-            controller_state_pub_->msg_.command_dot.push_back(0.0);
+            controller_state_pub_->msg_.state.push_back(0.0);
+            controller_state_pub_->msg_.state_dot.push_back(0.0);
         }
 
 
