@@ -29,6 +29,7 @@
 #include <tf/transform_listener.h>
 #include <boost/lexical_cast.hpp>
 #include <std_msgs/String.h>
+#include <string.h>
 
 #include "arm_controllers/ControllerJointState.h"
 
@@ -39,6 +40,7 @@
 #define SaveDataMax 49
 #define num_taskspace 6
 #define Z 1
+
 
 //DONE : Publish data for plotting
 //TODO : Improve publishing performance using passivity controller example
@@ -52,6 +54,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n)
     {
         loop_count_ = 0;
+        cntlr_flag = 0;
         // Populate Controller Gain Names
         state_names_.push_back("x");
         state_names_.push_back("y");
@@ -82,9 +85,9 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
         // Control Variables image_space
-        sd_.resize(6);
-        s_.resize(6);
-        es_temp_.resize(6);
+        // sd_.resize(6);
+        // s_.resize(6);
+        // es_temp_.resize(6);
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -171,15 +174,10 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
-        x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
-        // x_cmd_.data(0) = 0.0;
-        // x_cmd_.data(1) = 0.0;
-        // x_cmd_.data(2) = 0.80;
-
 
         /* Initial Starting Position */
         x_est_.data = Eigen::VectorXd::Zero(num_taskspace+1);
-        // sd_.data = Eigen::VectorXd::Zero(num_taskspace);
+
         //Position
         x_est_.data(0) = 0.6;
         x_est_.data(1) = 0.;
@@ -191,13 +189,14 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         x_est_.data(5) = quat[2];
         x_est_.data(6) = quat[3];
 
-        // for (size_t i = 0; i < num_taskspace; i++)
-        // {
-        //     // ex_(i) = 0;
-        // }
+        for (size_t i = 0; i < num_taskspace; i++)
+        {
+            ex_(i) = 0;
+        }
 
         // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
-        // J_.resize(kdl_chain_.getNrOfJoints());
+        J_.resize(kdl_chain_.getNrOfJoints());
+        J_L_.resize(6);
         // im_J_.resize(6);
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
@@ -222,9 +221,11 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         // pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
         // pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
         // 6.2 subsriber
-        sub = n.subscribe("command", 1000, &GravityPD_Controller_VisualServo_IB::commandCB, this);
+        // sub = n.subscribe("command", 1000, &GravityPD_Controller_VisualServo_IB::commandCB, this);
         //Visual servo camera subscriber
         cam_sub = n.subscribe("/fiducial_vertices", 1000, &GravityPD_Controller_VisualServo_IB::camPoseCB, this);
+
+        cntlr_sub = n.subscribe("switch_control", 1000, &GravityPD_Controller_VisualServo_IB::cntlrSwitch, this);
         
         // start realtime state publisher
 			controller_state_pub_.reset(
@@ -251,48 +252,62 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         return true;
     }
 
-    void commandCB(const std_msgs::Float64MultiArrayConstPtr &msg)
-    {
-        // ROS_INFO("comand o chickenfoot");
-        if (msg->data.size() != num_taskspace)
-        {
-            ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
-            return;
-        }
-        else
-        {
-            for (size_t i = 0; i < num_taskspace; i++)
-            {
-                x_cmd_(i) = msg->data[i];
+    // void commandCB(const std_msgs::Float64MultiArrayConstPtr &msg)
+    // {
+    //     // ROS_INFO("comand o chickenfoot");
+    //     if (msg->data.size() != num_taskspace)
+    //     {
+    //         ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
+    //         return;
+    //     }
+    //     else
+    //     {
+    //         for (size_t i = 0; i < num_taskspace; i++)
+    //         {
+    //             x_cmd_(i) = msg->data[i];
+    //         }
+    //     }
+    // }
+    
+    void cntlrSwitch(const std_msgs::String::ConstPtr &msg){
+            ROS_INFO(msg->data.c_str());
+            if(strcmp(msg->data.c_str(),"switch_IB") == 0){
+                cntlr_flag = 1;
+                ROS_INFO("-----------------Controller Switched to Image Based Visual Servoing--------------------");
             }
-        }
+            // if(strcmp(msg->data.c_str(),"switch_Task")){
+            //     cntlr_flag = 1;
+            //     ROS_INFO("-----------------Controller Switched to Task Space Velocity Control--------------------");
+            // }
     }
-    
-    
     void camPoseCB(const fiducial_msgs::FiducialArray &msg)
     {
         // Vertext points of marker detection
-        s_(0) = msg.fiducials[0].x0;
-        s_(1) = msg.fiducials[0].y0;
-        s_(2) = msg.fiducials[0].x1;
-        s_(3) = msg.fiducials[0].y1;
-        s_(4) = msg.fiducials[0].x2;
-        s_(5) = msg.fiducials[0].y2;
+        if(msg.fiducials.size() > 0)
+        {
+            s_(0) = msg.fiducials.at(0).x0;
+            s_(1) = msg.fiducials.at(0).y0;
+            s_(2) = msg.fiducials.at(0).x1;
+            s_(3) = msg.fiducials.at(0).y1;
+            s_(4) = msg.fiducials.at(0).x2;
+            s_(5) = msg.fiducials.at(0).y2;
+            
 
-        // Image Jacobian
-        for (std::size_t i = 0; i < 3; i=i+2) {
-            J_L_(i,0) = -1/Z;
-            J_L_(i,1) = 0;
-            J_L_(i,2) = s_(i)/Z;
-            J_L_(i,3) = s_(i) * s_(i+1);
-            J_L_(i,4) = -(1+pow(s_(i), 2));
-            J_L_(i,5) = s_(i+1);
-            J_L_(i+1,0) = 0;
-            J_L_(i+1,1) = -1/Z;
-            J_L_(i+1,2) = s_(i+1)/Z;
-            J_L_(i+1,3) = (1+pow(s_(i+1), 2));
-            J_L_(i+1,4) = -(s_(i) * s_(i+1));
-            J_L_(i+1,5) = -s_(i);
+            // Image Jacobian
+            for (std::size_t i = 0; i < 6; i=i+2) {
+                J_L_(i,0) = -1/Z;
+                J_L_(i,1) = 0;
+                J_L_(i,2) = s_(i)/Z;
+                J_L_(i,3) = s_(i) * s_(i+1);
+                J_L_(i,4) = -(1+pow(s_(i), 2));
+                J_L_(i,5) = s_(i+1);
+                J_L_(i+1,0) = 0;
+                J_L_(i+1,1) = -1/Z;
+                J_L_(i+1,2) = s_(i+1)/Z;
+                J_L_(i+1,3) = (1+pow(s_(i+1), 2));
+                J_L_(i+1,4) = -(s_(i) * s_(i+1));
+                J_L_(i+1,5) = -s_(i);
+            }
         }
 
 
@@ -339,52 +354,6 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             qdot_(i) = joints_[i].getVelocity();
         }
 
-        // *** 0.3 computing Jacobian J(q) ***
-        // jnt_to_jac_solver_->JntToJac(q_, J_);
-
-        // *** 0.4 computing Jacobian transpose/inversion ***
-        J_transpose_ = J_L_.data.transpose();
-
-        // 0.5 end-effector state by Compute forward kinematics (x_,xdot_)
-        // fk_pos_solver_->JntToCart(q_, x_);
-        xdot_ = J_L_.data * qdot_.data;
-
-        // ********* 1. Desired Trajecoty in Task Space *********
-        // Position
-        // xd_.p(0) = x_est_(0);
-        // xd_.p(1) = x_est_(1);
-        // xd_.p(2) = x_est_(2);
-        // Orientation
-        // quat = tf::Quaternion( x_est_(3),  x_est_(4),  x_est_(5),  x_est_(6));
-        // tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
-        // xd_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
-
-        // ********* 2. Motion Controller in Joint Space*********
-        // Error Definition in Task Space
-        sd_(0) = 288;
-        sd_(1) = 511;
-        sd_(2) = 266;
-        sd_(3) = 308;
-        sd_(4) = 469;
-        sd_(5) = 284;
-
-        es_temp_ = sd_ - s_;
-        // convert to matrix
-        es_(0) = es_temp_(0);
-        es_(1) = es_temp_(1);
-        es_(2) = es_temp_(2);
-        es_(3) = es_temp_(3);
-        es_(4) = es_temp_(4);
-        es_(5) = es_temp_(5);
-
-        // *** 2.2 Compute model(M,C,G) ***
-        id_solver_->JntToMass(q_, M_);
-        id_solver_->JntToCoriolis(q_, qdot_, C_);
-        id_solver_->JntToGravity(q_, G_);
-
-        // *** 2.3 Apply Torque Command to Actuator ***
-
-        // ISHIRA: Manipulation
         for (int i = 0; i < n_joints_; i++)
         {
             Kp_(i) = pids_[i].getGains().p_gain_;
@@ -392,8 +361,75 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             Ki_(i) = pids_[i].getGains().i_gain_;
         }
 
-        aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(es_)-Kd_.data.cwiseProduct(xdot_));
-        tau_d_.data = aux_d_.data + G_.data;
+        // *** 2.2 Compute model(M,C,G) ***
+        id_solver_->JntToMass(q_, M_);
+        id_solver_->JntToCoriolis(q_, qdot_, C_);
+        id_solver_->JntToGravity(q_, G_);
+
+
+        if(cntlr_flag == 0){
+
+            // *** 0.3 computing Jacobian J(q) ***
+            jnt_to_jac_solver_->JntToJac(q_, J_);
+            J_transpose_ = J_.data.transpose();
+            // 0.5 end-effector state by Compute forward kinematics (x_,xdot_)
+            fk_pos_solver_->JntToCart(q_, x_);
+            xdot_ = J_.data * qdot_.data;
+
+            // ********* 1. Desired Trajecoty in Task Space *********
+            // Position
+            xd_.p(0) = x_est_(0);
+            xd_.p(1) = x_est_(1);
+            xd_.p(2) = x_est_(2);
+            //Orientation
+            quat = tf::Quaternion( x_est_(3),  x_est_(4),  x_est_(5),  x_est_(6));
+            tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+            xd_.M = KDL::Rotation(KDL::Rotation::RPY(roll, pitch, yaw));
+
+            // ********* 2. Motion Controller in Joint Space*********
+            // Error Definition in Task Space   
+            ex_temp_ = diff(x_, xd_);
+
+            ex_(0) = ex_temp_(0);
+            ex_(1) = ex_temp_(1);
+            ex_(2) = ex_temp_(2);
+            ex_(3) = ex_temp_(3);
+            ex_(4) = ex_temp_(4);
+            ex_(5) = ex_temp_(5);
+
+            aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(ex_)-Kd_.data.cwiseProduct(xdot_));
+            tau_d_.data = aux_d_.data + G_.data;            
+        }else{
+            J_transpose_ = J_L_.data.transpose();
+            xdot_ = J_L_.data * qdot_.data;
+            // ********* 2. Motion Controller in Joint Space*********
+            // Error Definition in Task Space
+            sd_(0) = 288;
+            sd_(1) = 511;
+            sd_(2) = 266;
+            sd_(3) = 308;
+            sd_(4) = 469;
+            sd_(5) = 284;
+
+            es_temp_ = sd_ - s_;
+            // // convert to matrix
+            es_(0) = es_temp_(0);
+            es_(1) = es_temp_(1);
+            es_(2) = es_temp_(2);
+            es_(3) = es_temp_(3);
+            es_(4) = es_temp_(4);
+            es_(5) = es_temp_(5);
+
+            aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(es_)-Kd_.data.cwiseProduct(xdot_));
+            tau_d_.data = aux_d_.data + G_.data;
+            
+        }     
+
+        // *** 2.3 Apply Torque Command to Actuator ***
+
+        // ISHIRA: Manipulation
+        
+        
 
         for (int i = 0; i < n_joints_; i++)
         {
@@ -409,52 +445,52 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         // }
 
         // publish
-        if (loop_count_ % 10 == 0)
-        {
-            if (controller_state_pub_->trylock())
-            {
-                controller_state_pub_->msg_.header.stamp = time;
-                for(int i=0; i<n_joints_; i++)
-                {
-                    /* Joint Space*/
-                    //controller_state_pub_->msg_.command[i] = R2D*q_cmd_(i);
-                    //controller_state_pub_->msg_.command_dot[i] = R2D*qdot_cmd_(i);
-                    controller_state_pub_->msg_.state[i] = R2D*q_(i);
-                    controller_state_pub_->msg_.state_dot[i] = R2D*qdot_(i);
-                    // controller_state_pub_->msg_.error[i] = R2D*q_error_(i);
-                    // controller_state_pub_->msg_.error_dot[i] = R2D*q_error_dot_(i);
-                    // controller_state_pub_->msg_.effort_command[i] = tau_cmd_(i);
-                    //controller_state_pub_->msg_.effort_feedback[i] = tau_cmd_(i) - //controller_state_pub_->msg_.effort_feedforward[i];
+    //     if (loop_count_ % 10 == 0)
+    //     {
+    //         if (controller_state_pub_->trylock())
+    //         {
+    //             controller_state_pub_->msg_.header.stamp = time;
+    //             for(int i=0; i<n_joints_; i++)
+    //             {
+    //                 /* Joint Space*/
+    //                 //controller_state_pub_->msg_.command[i] = R2D*q_cmd_(i);
+    //                 //controller_state_pub_->msg_.command_dot[i] = R2D*qdot_cmd_(i);
+    //                 controller_state_pub_->msg_.state[i] = R2D*q_(i);
+    //                 controller_state_pub_->msg_.state_dot[i] = R2D*qdot_(i);
+    //                 // controller_state_pub_->msg_.error[i] = R2D*q_error_(i);
+    //                 // controller_state_pub_->msg_.error_dot[i] = R2D*q_error_dot_(i);
+    //                 // controller_state_pub_->msg_.effort_command[i] = tau_cmd_(i);
+    //                 //controller_state_pub_->msg_.effort_feedback[i] = tau_cmd_(i) - //controller_state_pub_->msg_.effort_feedforward[i];
 
                     
-                }
-                // Task Space x,y,z (in mm) roll, pitch, yaw (in deg)
-                //Position
-                for(int i=0; i<3; i++) {
-                    // controller_state_pub_->msg_.error_taskspace[i] = ex_(i) * 1000;
-                    // controller_state_pub_->msg_.desired_pose[i] = xd_.p(i);
-                    // controller_state_pub_->msg_.actual_pose[i] = x_.p(i);   
+    //             }
+    //             // Task Space x,y,z (in mm) roll, pitch, yaw (in deg)
+    //             //Position
+    //             for(int i=0; i<3; i++) {
+    //                 // controller_state_pub_->msg_.error_taskspace[i] = ex_(i) * 1000;
+    //                 // controller_state_pub_->msg_.desired_pose[i] = xd_.p(i);
+    //                 // controller_state_pub_->msg_.actual_pose[i] = x_.p(i);   
                     
-                }   
-                //Orientation
-                for(int i=3; i<6; i++) {
-                    // controller_state_pub_->msg_.error_taskspace[i] = R2D * ex_(i);
-                }
-                double a_roll, a_pitch, a_yaw, d_roll, d_pitch, d_yaw;
-                // xd_.M.GetEulerZYX(d_yaw, d_pitch, d_roll);
-                // x_.M.GetEulerZYX(a_yaw, a_pitch, a_roll);
-                controller_state_pub_->msg_.desired_pose[3] = R2D * d_roll;
-                controller_state_pub_->msg_.desired_pose[4] = R2D * d_pitch;
-                controller_state_pub_->msg_.desired_pose[5] = R2D * d_yaw;
-                controller_state_pub_->msg_.actual_pose[3] = R2D * a_roll;
-                controller_state_pub_->msg_.actual_pose[4] = R2D * a_pitch;
-                controller_state_pub_->msg_.actual_pose[5] = R2D * a_yaw;
+    //             }   
+    //             //Orientation
+    //             for(int i=3; i<6; i++) {
+    //                 // controller_state_pub_->msg_.error_taskspace[i] = R2D * ex_(i);
+    //             }
+    //             double a_roll, a_pitch, a_yaw, d_roll, d_pitch, d_yaw;
+    //             // xd_.M.GetEulerZYX(d_yaw, d_pitch, d_roll);
+    //             // x_.M.GetEulerZYX(a_yaw, a_pitch, a_roll);
+    //             controller_state_pub_->msg_.desired_pose[3] = R2D * d_roll;
+    //             controller_state_pub_->msg_.desired_pose[4] = R2D * d_pitch;
+    //             controller_state_pub_->msg_.desired_pose[5] = R2D * d_yaw;
+    //             controller_state_pub_->msg_.actual_pose[3] = R2D * a_roll;
+    //             controller_state_pub_->msg_.actual_pose[4] = R2D * a_pitch;
+    //             controller_state_pub_->msg_.actual_pose[5] = R2D * a_yaw;
 
-                controller_state_pub_->unlockAndPublish();
-            }
-        }
-        // Loop Counter Variable
-        loop_count_++;
+    //             controller_state_pub_->unlockAndPublish();
+    //         }
+    //     }
+    //     // Loop Counter Variable
+    //     loop_count_++;
     }
 
     void stopping(const ros::Time &time)
@@ -563,6 +599,7 @@ private:
     // others
     double t;
     int loop_count_;
+    int cntlr_flag;
 
     //Joint handles
     unsigned int n_joints_;                               // joint 숫자
@@ -575,7 +612,7 @@ private:
     KDL::Tree kdl_tree_;   // tree?
     KDL::Chain kdl_chain_; // chain?
 
-    // kdl M,C,G
+    // kdl M,C,G 
     KDL::JntSpaceInertiaMatrix M_; // intertia matrix
     KDL::JntArray C_;              // coriolis
     KDL::JntArray G_;              // gravity torque vector
@@ -583,6 +620,7 @@ private:
 
     // kdl and Eigen Jacobian
     KDL::Jacobian J_L_;
+    KDL::Jacobian J_;
     Eigen::Matrix<double, num_taskspace, num_taskspace> J_transpose_;
 
     // kdl solver
@@ -596,20 +634,27 @@ private:
     // Joint Space State
     KDL::JntArray q_, qdot_;
 
+    // Task Space State
+    // ver. 01
+    KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
+    KDL::Frame x_;
+    KDL::Twist ex_temp_;
+
     // Control Variables
-    Eigen::VectorXd sd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
-    Eigen::VectorXd s_;
-    Eigen::VectorXd es_temp_;
+    Eigen::Matrix<double, 6, 1> sd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
+    Eigen::Matrix<double, 6, 1> s_;
+    Eigen::Matrix<double, 6, 1> es_;
+    Eigen::Matrix<double, 6, 1> es_temp_;
     std::map<int, std::vector<double> > marker_points;
     
 
     // KDL::Twist xd_dot_, xd_ddot_;
-    Eigen::Matrix<double, num_taskspace, 1> es_;
+    Eigen::Matrix<double, num_taskspace, 1> ex_;
     Eigen::Matrix<double, num_taskspace, 1> xdot_;
     // Eigen::Matrix<double, 6, 6> J_L_;
 
     // Input
-    KDL::JntArray x_cmd_;
+    // KDL::JntArray x_cmd_;
 
     // Input
     KDL::JntArray aux_d_;
@@ -630,10 +675,9 @@ private:
     boost::scoped_ptr<
 			realtime_tools::RealtimePublisher<
 				arm_controllers::ControllerJointState> > controller_state_pub_;
-
-
+    
     // ros subsciber
-    ros::Subscriber sub;
+    ros::Subscriber cntlr_sub;
     ros::Subscriber cam_sub;
     tf::TransformListener tflistener;
     tf::StampedTransform stf;
