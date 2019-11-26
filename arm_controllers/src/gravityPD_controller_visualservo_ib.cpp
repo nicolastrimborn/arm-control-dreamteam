@@ -86,10 +86,6 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         Kp_.resize(n_joints_);
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
-        // Control Variables image_space
-        // sd_.resize(6);
-        // s_.resize(6);
-        // es_temp_.resize(6);
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -253,41 +249,29 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             controller_state_pub_->msg_.effort_feedforward.push_back(0.0);
             controller_state_pub_->msg_.effort_feedback.push_back(0.0);
         }
-        // Set Visual servo desired
         sd_(0) = 288;
         sd_(1) = 511;
         sd_(2) = 266;
         sd_(3) = 308;
         sd_(4) = 469;
         sd_(5) = 284;
-
+        
         // Initialise vs_message
-        visual_servo_pub_->msg_.xd0 = 0;
-        visual_servo_pub_->msg_.yd0 = 0;
-        visual_servo_pub_->msg_.xd1 = 0;
-        visual_servo_pub_->msg_.yd1 = 0;
-        visual_servo_pub_->msg_.xd2 = 0;
-        visual_servo_pub_->msg_.yd2 = 0;
-
+        visual_servo_pub_->msg_.x0 = 0;
+        visual_servo_pub_->msg_.y0 = 0;
+        visual_servo_pub_->msg_.x1 = 0;
+        visual_servo_pub_->msg_.y1 = 0;
+        visual_servo_pub_->msg_.x2 = 0;
+        visual_servo_pub_->msg_.y2 = 0;
+        visual_servo_pub_->msg_.xd0 = 288.0;
+        visual_servo_pub_->msg_.yd0 = 511.0;
+        visual_servo_pub_->msg_.xd1 = 266.0;
+        visual_servo_pub_->msg_.yd1 = 308.0;
+        visual_servo_pub_->msg_.xd2 = 469.0;
+        visual_servo_pub_->msg_.yd2 = 284.0;
         return true;
     }
 
-    // void commandCB(const std_msgs::Float64MultiArrayConstPtr &msg)
-    // {
-    //     // ROS_INFO("comand o chickenfoot");
-    //     if (msg->data.size() != num_taskspace)
-    //     {
-    //         ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
-    //         return;
-    //     }
-    //     else
-    //     {
-    //         for (size_t i = 0; i < num_taskspace; i++)
-    //         {
-    //             x_cmd_(i) = msg->data[i];
-    //         }
-    //     }
-    // }
     
     void cntlrSwitch(const std_msgs::String::ConstPtr &msg){
             // ROS_INFO(msg->data.c_str());
@@ -345,6 +329,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
 
     void update(const ros::Time &time, const ros::Duration &period)
     {
+        
         // ********* 0. Get states from gazebo *********
 
         // 0.2 joint state
@@ -403,8 +388,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             J_transpose_ = J_L_.data.transpose();
             xdot_ = J_L_.data * qdot_.data;
             // ********* 2. Motion Controller in Joint Space*********
-            // Error Definition in Task Space
-            
+            // Error Definition in Task Space            
             es_temp_ = sd_ - s_;
             // convert to matrix
             es_(0) = es_temp_(0);
@@ -415,34 +399,25 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             es_(5) = es_temp_(5);
 
             aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(es_)-Kd_.data.cwiseProduct(xdot_));
-            tau_d_.data = aux_d_.data + G_.data;
-            
-        }     
+            tau_d_.data = aux_d_.data + G_.data;            
+        } 
 
         // *** 2.3 Apply Torque Command to Actuator ***
-
-        // ISHIRA: Manipulation
-        
-        
-
         for (int i = 0; i < n_joints_; i++)
         {
             joints_[i].setCommand(tau_d_(i));
-        }
+        }   
 
-        // call save/print data at 100hz
-        // if (loop_count_ % 10 == 0) {
-        //     // ********* 3. data 저장 *********
-        //     //save_data();
-        //     // ********* 4. state 출력 *********
-        //     //print_state();
-        // }
+        publish_msgs(time);
+    }
+    void publish_msgs(const ros::Time &time){
 
         // publish
         if (loop_count_ % 10 == 0)
         {
             if (controller_state_pub_->trylock())
-            {
+            {   
+                // ROS_INFO("Publishing Controller State");
                 controller_state_pub_->msg_.header.stamp = time;
                 for(int i=0; i<n_joints_; i++)
                 {
@@ -454,6 +429,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             }
             if (visual_servo_pub_->trylock())
             {
+                ROS_INFO("Publishing Point Locations sd_: %f", sd_(0));
                 visual_servo_pub_->msg_.header.stamp = time;
                 visual_servo_pub_->msg_.xd0 = sd_(0);
                 visual_servo_pub_->msg_.yd0 = sd_(1);
@@ -463,6 +439,12 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
                 visual_servo_pub_->msg_.yd2 = sd_(5);
                 // visual_servo_pub_->msg_.xd_3 = sd_(6);
                 // visual_servo_pub_->msg_.yd_3 = sd_(7);
+                visual_servo_pub_->msg_.xd0 = s_(0);
+                visual_servo_pub_->msg_.yd0 = s_(1);
+                visual_servo_pub_->msg_.xd1 = s_(2);
+                visual_servo_pub_->msg_.yd1 = s_(3);
+                visual_servo_pub_->msg_.xd2 = s_(4);
+                visual_servo_pub_->msg_.yd2 = s_(5);
                 visual_servo_pub_->unlockAndPublish();
             }
         }
@@ -470,107 +452,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         loop_count_++;
     }
 
-    void stopping(const ros::Time &time)
-    {
-    }
-
-    void save_data()
-    {
-        // 1
-        // // Simulation time (unit: sec)
-        // SaveData_[0] = t;
-
-        // // Actual position in joint space (unit: rad)
-        // SaveData_[19] = q_(0);
-        // SaveData_[20] = q_(1);
-        // SaveData_[21] = q_(2);
-        // SaveData_[22] = q_(3);
-        // SaveData_[23] = q_(4);
-        // SaveData_[24] = q_(5);
-
-        // // Actual velocity in joint space (unit: rad/s)
-        // SaveData_[25] = qdot_(0);
-        // SaveData_[26] = qdot_(1);
-        // SaveData_[27] = qdot_(2);
-        // SaveData_[28] = qdot_(3);
-        // SaveData_[29] = qdot_(4);
-        // SaveData_[30] = qdot_(5);
-
-        // // 2
-        // msg_qd_.data.clear();
-        // msg_q_.data.clear();
-        // msg_e_.data.clear();
-
-        // msg_SaveData_.data.clear();
-
-        // // 3
-        // for (int i = 0; i < n_joints_; i++)
-        // {
-        //     msg_q_.data.push_back(q_(i));
-
-        // }
-
-        // for (int i = 0; i < SaveDataMax; i++)
-        // {
-        //     msg_SaveData_.data.push_back(SaveData_[i]);
-        // }
-
-        // // 4
-        // pub_q_.publish(msg_q_);
-
-        // pub_SaveData_.publish(msg_SaveData_);
-    }
-
-    void print_state()
-    {
-        // static int count = 0;
-        // if (count > 99)
-        // {
-        //     printf("*********************************************************\n\n");
-        //     printf("*** Simulation Time (unit: sec)  ***\n");
-        //     printf("t = %f\n", t);
-        //     printf("\n");
-
-        //     printf("*** Actual State in Joint Space (unit: deg) ***\n");
-        //     printf("q_(0): %f, ", q_(0) * R2D);
-        //     printf("q_(1): %f, ", q_(1) * R2D);
-        //     printf("q_(2): %f, ", q_(2) * R2D);
-        //     printf("q_(3): %f, ", q_(3) * R2D);
-        //     printf("q_(4): %f, ", q_(4) * R2D);
-        //     printf("q_(5): %f\n", q_(5) * R2D);
-        //     printf("\n");
-        //     printf("*** Camera POS WRT world ***\n");
-
-        //     printf("x_est_(0): %f, ", x_est_(0));
-        //     printf("x_est_(1): %f, ", x_est_(1));
-        //     printf("x_est_(2): %f, ", x_est_(2));
-        //     printf("x_est_(3): %f, ", x_est_(3));
-        //     printf("x_est_(4): %f, ", x_est_(4));
-        //     printf("x_est_(5): %f, ", x_est_(5));
-        //     printf("x_est_(6): %f\n", x_est_(6));
-        //     printf("\n");
-        //     printf("*** Desired Position in Task Space (unit: m) ***\n");
-        //     printf("xd: %f, ", xd_.p(0));
-        //     printf("yd: %f, ", xd_.p(1));
-        //     printf("zd: %f\n", xd_.p(2));
-        //     printf("\n");
-        //     printf("*** Command from Subscriber in Task Space (unit: m) ***\n");
-        //     printf("x_cmd: %f, ", x_cmd_(0));
-        //     printf("y_cmd: %f, ", x_cmd_(1));
-        //     printf("z_cmd: %f, ", x_cmd_(2));
-        //     printf("r_cmd: %f, ", x_cmd_(3));
-        //     printf("p_cmd: %f, ", x_cmd_(4));
-        //     printf("y_cmd: %f\n", x_cmd_(5));
-        //     printf("\n");
-        //     printf("*** Actual Position in Task Space (unit: m) ***\n");
-        //     printf("x: %f, ", x_.p(0));
-        //     printf("y: %f, ", x_.p(1));
-        //     printf("z: %f\n", x_.p(2));
-        //     printf("\n");
-        //     count = 0;
-        // }
-        // count++;
-    }
+    void stopping(const ros::Time &time) {}
 
 private:
     // others
@@ -653,7 +535,7 @@ private:
 			realtime_tools::RealtimePublisher<
 				arm_controllers::ControllerJointState> > controller_state_pub_;
 
-    boost::scoped_ptr<
+    boost::scoped_ptr<visual_servo_pub_
         realtime_tools::RealtimePublisher<
             arm_controllers::VisualServoMsg> > visual_servo_pub_;
     
