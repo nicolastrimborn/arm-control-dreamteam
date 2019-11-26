@@ -56,6 +56,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n)
     {
         loop_count_ = 0;
+        // Flag to switch between controllers
         cntlr_flag = 0;
         // Populate Controller Gain Names
         state_names_.push_back("x");
@@ -167,40 +168,40 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         // 4.5 forward kinematics solver 초기화
         fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
 
-        // ********* 5. 각종 변수 초기화 *********
-        // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
+        //** Joint parameter Vectors */
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
 
-        /* Initial Starting Position */
+        //** Initial Starting Position */
         x_est_.data = Eigen::VectorXd::Zero(num_taskspace+1);
-
         //Position
-        x_est_.data(0) = 0.6;
-        x_est_.data(1) = 0.;
-        x_est_.data(2) = 0.5;
+        x_est_.data(0) = 0.0;
+        x_est_.data(1) = 0.0;
+        x_est_.data(2) = 0.88;
         // Orientation
-        quat.setRPY(0, PI/2, 0);
+        quat.setRPY(0, 0, 0);
         x_est_.data(3) = quat[0];
         x_est_.data(4) = quat[1];
         x_est_.data(5) = quat[2];
         x_est_.data(6) = quat[3];
 
+
+        // Initialise error to zero
         for (size_t i = 0; i < num_taskspace; i++)
         {
             ex_(i) = 0;
         }
 
-        // 5.2 Matrix 초기화 (사이즈 정의 및 값 0)
+        // GravityPD Jacobian
         J_.resize(kdl_chain_.getNrOfJoints());
+        //Image Jacobian
         J_L_.resize(6);
-        // im_J_.resize(6);
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
 
-         /* PID Initialise, enables adjustment with dynamic reconfigure */
+        //* PID Initialise, enables adjustment with dynamic reconfigure */
         pids_.resize(n_joints_);
         for (size_t i=0; i<n_joints_; i++)
         {
@@ -212,17 +213,13 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             }
         }
 
-        // ********* 6. ROS 명령어 *********
-        // 6.1 publisher
-        // pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
-        // pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
-        // 6.2 subsriber
-        // sub = n.subscribe("command", 1000, &GravityPD_Controller_VisualServo_IB::commandCB, this);
-        //Visual servo camera subscriber
+        //* Subscribers *****************************************************************/
+        // Subscribes to marker points,  obtains coordinates of 4 corners of detected marker
         cam_sub = n.subscribe("/fiducial_vertices", 1000, &GravityPD_Controller_VisualServo_IB::camPoseCB, this);
-
+        // Subscribes to switch topic, switches between IBVS and gravity PD Controllers
         cntlr_sub = n.subscribe("switch_control", 1000, &GravityPD_Controller_VisualServo_IB::cntlrSwitch, this);
         
+        //* Publishers *****************************************************************/
         // start realtime state publisher
         controller_state_pub_.reset(
             new realtime_tools::RealtimePublisher
@@ -232,61 +229,42 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         new realtime_tools::RealtimePublisher
             <arm_controllers::VisualServoMsg>(n, "visual_state", 1));
 
-        // Initialise publish message
+        // Initialise publish message for controller_state_pub_,  allocate memory for each joint
         for (size_t i=0; i<n_joints_; i++)
         {
-            controller_state_pub_->msg_.name.push_back(joint_names_[i]);
             controller_state_pub_->msg_.command.push_back(0.0);
             controller_state_pub_->msg_.command_dot.push_back(0.0);
-            controller_state_pub_->msg_.state.push_back(0.0);
-            controller_state_pub_->msg_.state_dot.push_back(0.0);
-            controller_state_pub_->msg_.error.push_back(0.0);
-            controller_state_pub_->msg_.error_dot.push_back(0.0);
-            controller_state_pub_->msg_.error_taskspace.push_back(0.0);
-            controller_state_pub_->msg_.desired_pose.push_back(0.0);
-            controller_state_pub_->msg_.actual_pose.push_back(0.0);
-            controller_state_pub_->msg_.effort_command.push_back(0.0);
-            controller_state_pub_->msg_.effort_feedforward.push_back(0.0);
-            controller_state_pub_->msg_.effort_feedback.push_back(0.0);
         }
-        sd_(0) = 288;
-        sd_(1) = 511;
-        sd_(2) = 266;
-        sd_(3) = 308;
-        sd_(4) = 469;
-        sd_(5) = 284;
-        
-        // Initialise vs_message
-        visual_servo_pub_->msg_.x0 = 0;
-        visual_servo_pub_->msg_.y0 = 0;
-        visual_servo_pub_->msg_.x1 = 0;
-        visual_servo_pub_->msg_.y1 = 0;
-        visual_servo_pub_->msg_.x2 = 0;
-        visual_servo_pub_->msg_.y2 = 0;
-        visual_servo_pub_->msg_.xd0 = 288.0;
-        visual_servo_pub_->msg_.yd0 = 511.0;
-        visual_servo_pub_->msg_.xd1 = 266.0;
-        visual_servo_pub_->msg_.yd1 = 308.0;
-        visual_servo_pub_->msg_.xd2 = 469.0;
-        visual_servo_pub_->msg_.yd2 = 284.0;
+
+
+        //* Desired coordinates for IBVS Controller. Need minimum 3 points with (x,y)
+        sd_(0) = 294; //x1
+        sd_(1) = 517; //y1
+        sd_(2) = 285; //x2  
+        sd_(3) = 315; //y2
+        sd_(4) = 486; //x3
+        sd_(5) = 306; //y3
+
         return true;
     }
 
-    
+    /* Callback for Controller switch topic*/
     void cntlrSwitch(const std_msgs::String::ConstPtr &msg){
             // ROS_INFO(msg->data.c_str());
             if(strcmp(msg->data.c_str(),"switch_IB") == 0){
                 cntlr_flag = 1;
-                ROS_INFO("-----------------Controller Switched to Image Based Visual Servoing--------------------");
+                // ROS_INFO("-----------------Controller Switched to Image Based Visual Servoing--------------------");
             }
             // if(strcmp(msg->data.c_str(),"switch_Task")){
             //     cntlr_flag = 1;
             //     ROS_INFO("-----------------Controller Switched to Task Space Velocity Control--------------------");
             // }
     }
+
+    //* Callback Function for Aruco marker detection, containing Marker vertecies
     void camPoseCB(const fiducial_msgs::FiducialArray &msg)
     {
-        // Vertext points of marker detection
+        // Vertex points of marker detection
         if(msg.fiducials.size() > 0)
         {
             s_(0) = msg.fiducials.at(0).x0;
@@ -296,8 +274,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             s_(4) = msg.fiducials.at(0).x2;
             s_(5) = msg.fiducials.at(0).y2;
             
-
-            // Image Jacobian
+            // Image Jacobian (intereraction matrix)
             for (std::size_t i = 0; i < 6; i=i+2) {
                 J_L_(i,0) = -1/Z;
                 J_L_(i,1) = 0;
@@ -331,14 +308,14 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
     {
         
         // ********* 0. Get states from gazebo *********
-
         // 0.2 joint state
         for (int i = 0; i < n_joints_; i++)
         {
             q_(i) = joints_[i].getPosition();
             qdot_(i) = joints_[i].getVelocity();
         }
-
+        
+        // Get Gains
         for (int i = 0; i < n_joints_; i++)
         {
             Kp_(i) = pids_[i].getGains().p_gain_;
@@ -351,7 +328,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         id_solver_->JntToCoriolis(q_, qdot_, C_);
         id_solver_->JntToGravity(q_, G_);
 
-
+        // Operate as Gravity PD Controller
         if(cntlr_flag == 0){
 
             // *** 0.3 computing Jacobian J(q) ***
@@ -383,12 +360,14 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             ex_(5) = ex_temp_(5);
 
             aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(ex_)-Kd_.data.cwiseProduct(xdot_));
-            tau_d_.data = aux_d_.data + G_.data;            
+            tau_d_.data = aux_d_.data + G_.data;
+
+        // Operate as IBVS Controller               
         } else {
             J_transpose_ = J_L_.data.transpose();
             xdot_ = J_L_.data * qdot_.data;
             // ********* 2. Motion Controller in Joint Space*********
-            // Error Definition in Task Space            
+            // Error Definition in Image Space            
             es_temp_ = sd_ - s_;
             // convert to matrix
             es_(0) = es_temp_(0);
@@ -412,9 +391,10 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
     }
     void publish_msgs(const ros::Time &time){
 
-        // publish
+        // publishes at 100hz
         if (loop_count_ % 10 == 0)
         {
+            // Publishes Controller State
             if (controller_state_pub_->trylock())
             {   
                 // ROS_INFO("Publishing Controller State");
@@ -427,24 +407,26 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
                 }
                 controller_state_pub_->unlockAndPublish();
             }
+            
+            // Publishes IBVS points for plotting.  sd_(desired) vs s_(measured)
             if (visual_servo_pub_->trylock())
             {
-                ROS_INFO("Publishing Point Locations sd_: %f", sd_(0));
+                // ROS_INFO("Publishing Point Locations sd_: %f", sd_(0));
                 visual_servo_pub_->msg_.header.stamp = time;
-                visual_servo_pub_->msg_.xd0 = sd_(0);
-                visual_servo_pub_->msg_.yd0 = sd_(1);
-                visual_servo_pub_->msg_.xd1 = sd_(2);
-                visual_servo_pub_->msg_.yd1 = sd_(3);
-                visual_servo_pub_->msg_.xd2 = sd_(4);
-                visual_servo_pub_->msg_.yd2 = sd_(5);
+                visual_servo_pub_->msg_.xd1 = sd_(0);
+                visual_servo_pub_->msg_.yd1 = sd_(1);
+                visual_servo_pub_->msg_.xd2 = sd_(2);
+                visual_servo_pub_->msg_.yd2 = sd_(3);
+                visual_servo_pub_->msg_.xd3 = sd_(4);
+                visual_servo_pub_->msg_.yd3 = sd_(5);
                 // visual_servo_pub_->msg_.xd_3 = sd_(6);
                 // visual_servo_pub_->msg_.yd_3 = sd_(7);
-                visual_servo_pub_->msg_.xd0 = s_(0);
-                visual_servo_pub_->msg_.yd0 = s_(1);
-                visual_servo_pub_->msg_.xd1 = s_(2);
-                visual_servo_pub_->msg_.yd1 = s_(3);
-                visual_servo_pub_->msg_.xd2 = s_(4);
-                visual_servo_pub_->msg_.yd2 = s_(5);
+                visual_servo_pub_->msg_.x1 = s_(0);
+                visual_servo_pub_->msg_.y1 = s_(1);
+                visual_servo_pub_->msg_.x2 = s_(2);
+                visual_servo_pub_->msg_.y2 = s_(3);
+                visual_servo_pub_->msg_.x3 = s_(4);
+                visual_servo_pub_->msg_.y3 = s_(5);
                 visual_servo_pub_->unlockAndPublish();
             }
         }
@@ -505,16 +487,12 @@ private:
     Eigen::Matrix<double, 6, 1> es_;
     Eigen::Matrix<double, 6, 1> es_temp_;
     std::map<int, std::vector<double> > marker_points;
-    
 
     // KDL::Twist xd_dot_, xd_ddot_;
     Eigen::Matrix<double, num_taskspace, 1> ex_;
     Eigen::Matrix<double, num_taskspace, 1> xdot_;
     // Eigen::Matrix<double, 6, 6> J_L_;
-
-    // Input
-    // KDL::JntArray x_cmd_;
-
+    
     // Input
     KDL::JntArray aux_d_;
     KDL::JntArray tau_d_;
@@ -523,32 +501,20 @@ private:
     KDL::JntArray Kp_, Ki_, Kd_;
     std::vector<control_toolbox::Pid> pids_;       /**< Internal PID controllers. */
 
-    // save the data
-    double SaveData_[SaveDataMax];
-
     // ros publisher
-    ros::Publisher pub_q_;
-    ros::Publisher pub_SaveData_;
-
-    // Realtime safe publisher
+    // Realtime safe publisher controller state
     boost::scoped_ptr<
 			realtime_tools::RealtimePublisher<
 				arm_controllers::ControllerJointState> > controller_state_pub_;
 
-    boost::scoped_ptr<visual_servo_pub_
+    // Realtime safe publisher IBVS points
+    boost::scoped_ptr<
         realtime_tools::RealtimePublisher<
             arm_controllers::VisualServoMsg> > visual_servo_pub_;
     
     // ros subsciber
     ros::Subscriber cntlr_sub;
     ros::Subscriber cam_sub;
-    tf::TransformListener tflistener;
-    tf::StampedTransform stf;
-
-    // ros message
-    std_msgs::Float64MultiArray msg_qd_, msg_q_, msg_e_;
-    std_msgs::Float64MultiArray msg_SaveData_;
-
 
     // the tf::Quaternion has a method to acess roll pitch and yaw
     tf::Quaternion quat;

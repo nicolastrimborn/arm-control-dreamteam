@@ -23,6 +23,6 @@
       <arg name="PI" default="3.1415926535897931"/>
       <arg name="path" default="$(find elfin_markers)/markers/aruco_visual_marker_5/model.sdf" />
       <node name="urdf_spawner3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" 
-      args="-sdf -model -file $(arg path) -x 1.0 -z 0.5 -P -1.57"/>
-
+      args="-sdf -model -file $(arg path) -x 0.0 -z 1.3 -P -3.141"/>
+      <!--args="-sdf -model -file $(arg path) -x 1.0 -z 0.5 -P -1.57"/>-->
 </launch>

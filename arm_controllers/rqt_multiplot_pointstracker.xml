@@ -29,11 +29,11 @@
                                     <field>xd1</field>
                                     <field_type>0</field_type>
                                     <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_maximum>800</absolute_maximum>
                                         <absolute_minimum>0</absolute_minimum>
                                         <relative_maximum>0</relative_maximum>
                                         <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
+                                        <type>1</type>
                                     </scale>
                                     <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
                                     <type>arm_controllers/VisualServoMsg</type>
@@ -42,11 +42,11 @@
                                     <field>yd1</field>
                                     <field_type>0</field_type>
                                     <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_maximum>800</absolute_maximum>
                                         <absolute_minimum>0</absolute_minimum>
                                         <relative_maximum>0</relative_maximum>
                                         <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
+                                        <type>1</type>
                                     </scale>
                                     <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
                                     <type>arm_controllers/VisualServoMsg</type>
@@ -64,12 +64,12 @@
                             <style>
                                 <lines_interpolate>false</lines_interpolate>
                                 <pen_style>1</pen_style>
-                                <pen_width>1</pen_width>
+                                <pen_width>10</pen_width>
                                 <render_antialias>false</render_antialias>
                                 <steps_invert>false</steps_invert>
                                 <sticks_baseline>0</sticks_baseline>
                                 <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
+                                <type>3</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
                             <title>sd_1</title>
@@ -80,11 +80,11 @@
                                     <field>xd2</field>
                                     <field_type>0</field_type>
                                     <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_maximum>800</absolute_maximum>
                                         <absolute_minimum>0</absolute_minimum>
                                         <relative_maximum>0</relative_maximum>
                                         <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
+                                        <type>1</type>
                                     </scale>
                                     <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
                                     <type>arm_controllers/VisualServoMsg</type>
@@ -93,11 +93,11 @@
                                     <field>yd2</field>
                                     <field_type>0</field_type>
                                     <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_maximum>800</absolute_maximum>
                                         <absolute_minimum>0</absolute_minimum>
                                         <relative_maximum>0</relative_maximum>
                                         <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
+                                        <type>1</type>
                                     </scale>
                                     <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
                                     <type>arm_controllers/VisualServoMsg</type>
@@ -115,7 +115,58 @@
                             <style>
                                 <lines_interpolate>false</lines_interpolate>
                                 <pen_style>1</pen_style>
-                                <pen_width>1</pen_width>
+                                <pen_width>10</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>3</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>sd_2</title>
+                        </curve_1>
+                        <curve_2>
+                            <axes>
+                                <x_axis>
+                                    <field>x1</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>800</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>1</type>
+                                    </scale>
+                                    <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
+                                    <type>arm_controllers/VisualServoMsg</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>y1</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>800</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>1</type>
+                                    </scale>
+                                    <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
+                                    <type>arm_controllers/VisualServoMsg</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#ff0000</custom_color>
+                                <type>1</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>10</pen_width>
                                 <render_antialias>false</render_antialias>
                                 <steps_invert>false</steps_invert>
                                 <sticks_baseline>0</sticks_baseline>
@@ -123,9 +174,60 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>sd_2</title>
-                        </curve_1>
-                        <curve_2>
+                            <title>s_1</title>
+                        </curve_2>
+                        <curve_3>
+                            <axes>
+                                <x_axis>
+                                    <field>x2</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>800</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>1</type>
+                                    </scale>
+                                    <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
+                                    <type>arm_controllers/VisualServoMsg</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>y2</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>800</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>1</type>
+                                    </scale>
+                                    <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
+                                    <type>arm_controllers/VisualServoMsg</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#00ffff</custom_color>
+                                <type>1</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>10</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>3</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>s_2</title>
+                        </curve_3>
+                        <curve_4>
                             <axes>
                                 <x_axis>
                                     <field>xd3</field>
@@ -166,117 +268,15 @@
                             <style>
                                 <lines_interpolate>false</lines_interpolate>
                                 <pen_style>1</pen_style>
-                                <pen_width>2</pen_width>
+                                <pen_width>10</pen_width>
                                 <render_antialias>false</render_antialias>
                                 <steps_invert>false</steps_invert>
                                 <sticks_baseline>0</sticks_baseline>
                                 <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
+                                <type>3</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
                             <title>sd_3</title>
-                        </curve_2>
-                        <curve_3>
-                            <axes>
-                                <x_axis>
-                                    <field>x1</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
-                                    <type>arm_controllers/VisualServoMsg</type>
-                                </x_axis>
-                                <y_axis>
-                                    <field>y1</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
-                                    <type>arm_controllers/VisualServoMsg</type>
-                                </y_axis>
-                            </axes>
-                            <color>
-                                <custom_color>#ff0000</custom_color>
-                                <type>1</type>
-                            </color>
-                            <data>
-                                <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
-                            </data>
-                            <style>
-                                <lines_interpolate>false</lines_interpolate>
-                                <pen_style>1</pen_style>
-                                <pen_width>1</pen_width>
-                                <render_antialias>false</render_antialias>
-                                <steps_invert>false</steps_invert>
-                                <sticks_baseline>0</sticks_baseline>
-                                <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
-                            </style>
-                            <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>s_1</title>
-                        </curve_3>
-                        <curve_4>
-                            <axes>
-                                <x_axis>
-                                    <field>x2</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
-                                    <type>arm_controllers/VisualServoMsg</type>
-                                </x_axis>
-                                <y_axis>
-                                    <field>y2</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/elfin/gravityPD_controller_visualservo/visual_state</topic>
-                                    <type>arm_controllers/VisualServoMsg</type>
-                                </y_axis>
-                            </axes>
-                            <color>
-                                <custom_color>#00ffff</custom_color>
-                                <type>1</type>
-                            </color>
-                            <data>
-                                <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
-                            </data>
-                            <style>
-                                <lines_interpolate>false</lines_interpolate>
-                                <pen_style>1</pen_style>
-                                <pen_width>1</pen_width>
-                                <render_antialias>false</render_antialias>
-                                <steps_invert>false</steps_invert>
-                                <sticks_baseline>0</sticks_baseline>
-                                <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
-                            </style>
-                            <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>s_2</title>
                         </curve_4>
                         <curve_5>
                             <axes>
@@ -308,7 +308,7 @@
                                 </y_axis>
                             </axes>
                             <color>
-                                <custom_color>#70ff00</custom_color>
+                                <custom_color>#ffaa00</custom_color>
                                 <type>1</type>
                             </color>
                             <data>
@@ -319,21 +319,21 @@
                             <style>
                                 <lines_interpolate>false</lines_interpolate>
                                 <pen_style>1</pen_style>
-                                <pen_width>1</pen_width>
+                                <pen_width>10</pen_width>
                                 <render_antialias>false</render_antialias>
                                 <steps_invert>false</steps_invert>
                                 <sticks_baseline>0</sticks_baseline>
                                 <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
+                                <type>3</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>s3</title>
+                            <title>s_3</title>
                         </curve_5>
                     </curves>
                     <legend>
                         <visible>true</visible>
                     </legend>
-                    <plot_rate>30</plot_rate>
+                    <plot_rate>100</plot_rate>
                     <title>Points_tracker</title>
                 </column_0>
             </row_0>

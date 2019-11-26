@@ -1,17 +1,17 @@
 <!-- Run the aruco_detect node -->
 <launch>
   <!-- namespace for camera input -->
-  <arg name="camera" default="/camera"/>
-  <arg name="image" default="image"/>
+  <arg name="camera" default="/elfin_camera"/>
+  <arg name="image" default="image_rect_color"/>
   <arg name="transport" default="compressed"/>
-  <arg name="fiducial_len" default="0.14"/>
-  <arg name="dictionary" default="7"/>
+  <arg name="fiducial_len" default="0.17"/>
+  <arg name="dictionary" default="16"/>
   <arg name="do_pose_estimation" default="true"/>
   <arg name="ignore_fiducials" default="" />
   <arg name="fiducial_len_override" default="" />
 
   <node pkg="aruco_detect" name="aruco_detect"
-    type="aruco_detect" output="screen" respawn="false">
+    type="aruco_detect" output="log" respawn="false">
     <param name="image_transport" value="$(arg transport)"/>
     <param name="publish_images" value="true" />
     <param name="fiducial_len" value="$(arg fiducial_len)"/>
