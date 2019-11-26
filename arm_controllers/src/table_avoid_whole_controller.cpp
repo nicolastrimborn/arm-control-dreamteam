@@ -26,6 +26,8 @@
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
 
+#include <utils/pseudo_inversion.h>
+
 #define PI 3.141592
 #define D2R PI / 180.0
 #define R2D 180.0 / PI
@@ -33,6 +35,7 @@
 #define num_taskspace 6
 #define Q_Star 0.01
 #define Rep_Gradient 40
+
 
 namespace arm_controllers
 {
@@ -55,6 +58,12 @@ namespace arm_controllers
             state_names_.push_back("roll");
             state_names_.push_back("pitch");
             state_names_.push_back("yaw");
+
+            if (!n.getParam("links", link_names_))
+            {
+                ROS_ERROR("Could not find joint name");
+                return false;
+            }
 
             if (n_joints_ == 0)
             {
@@ -153,6 +162,7 @@ namespace arm_controllers
             else
             {
                 ROS_INFO("Got kdl chain");
+                ROS_INFO_STREAM(root_name);
             }
 
             // PIDS////////////////////////////////////////////////////////////////
@@ -249,7 +259,6 @@ namespace arm_controllers
                 particles_z[i+1] = particles_z[i] + step_z;
             }
 
-
             // 6.2 subsriber
             sub = n.subscribe("command", 1000, &TableAvoidWhole_Controller::commandCB, this);
             obs_sub = n.subscribe("obstacePosition", 1000, &TableAvoidWhole_Controller::obstacleCB, this);
@@ -323,7 +332,8 @@ namespace arm_controllers
 
             // ********* 1. Desired Trajecoty in Joint Space *********
             fk_pos_solver_->JntToCart(q_,x_);
-
+            printf("Butterfly");
+            ROS_INFO_STREAM(x_.p(3));
             // *** 1.1 Desired Trajectory in taskspace ***
             xd_.p(0) = x_cmd_(0);
             xd_.p(1) = x_cmd_(1);
@@ -348,65 +358,109 @@ namespace arm_controllers
 
             q_att_.data = J_inv_ * aux_2_d_.data;
             // Repulsive
-            dqc_ = 100;
-            qC_dot_.data = q_att_.data ;
 
-            for (int i=0; i<n_joints_; i++){
-                fk_pos_solver_->JntToCart(q_,x_, i);
-                jnt_to_jac_solver_->JntToJac(q_, J_, i);
-                J_inv_ = J_.data.inverse();
+            qC_dot_.data = q_att_.data ;
+            //ROS_INFO_STREAM(kdl_chain_.getSegment(0).pose(0.0).p(3));
+            // FK for segments
+
+
+            printf("Tiger");
+            for (int n=1; n<n_joints_; n++) {
+                Eigen::MatrixXd J_inv_temp;
+                std::string root_name, tip_name;
+                root_name = "world";
+                tip_name = link_names_[n];
+
+                if (!kdl_tree_.getChain(root_name, tip_name, kdl_chain_temp_))
+                {
+                    ROS_ERROR_STREAM("Failed to get KDL chain from tree: ");
+                    ROS_ERROR_STREAM("  " << root_name << " --> " << tip_name);
+                    ROS_ERROR_STREAM("  Tree has " << kdl_tree_.getNrOfJoints() << " joints");
+                    ROS_ERROR_STREAM("  Tree has " << kdl_tree_.getNrOfSegments() << " segments");
+                    ROS_ERROR_STREAM("  The segments are:");
+
+                    KDL::SegmentMap segment_map = kdl_tree_.getSegments();
+                    KDL::SegmentMap::iterator it;
+
+                    for (it = segment_map.begin(); it != segment_map.end(); it++)
+                        ROS_ERROR_STREAM("    " << (*it).first);
+
+                }
+                else
+                {
+                    ROS_INFO("Got kdl chain");
+                    ROS_INFO_STREAM(link_names_[n]);
+                }
+                int n_joints_temp_ = kdl_chain_temp_.getNrOfJoints();
+                q_temp_.data = Eigen::VectorXd::Zero(n_joints_temp_);
+                for (int i = 0; i < n_joints_temp_; i++) {
+                    q_temp_.data[i] = q_.data[i];
+                }
+
+                fk_pos_solver_temp_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_temp_));
+                fk_pos_solver_temp_->JntToCart(q_temp_,x_);
+                jnt_to_jac_solver_temp_.reset(new KDL::ChainJntToJacSolver(kdl_chain_temp_));
+                J_temp_.resize(n_joints_temp_);
+                jnt_to_jac_solver_temp_->JntToJac(q_temp_, J_temp_);
+                printf("%i", n);
+                pseudo_inverse(J_temp_.data, J_inv_temp);
+                ROS_INFO_STREAM(J_inv_);
+                dqc_ = 100;
                 for (int i=0; i<50; i++){
-                    for (int j=0; j<50; j++) {
-                        for (int k=0; k < 50; k++) {
-                            double d_;
-                            d_ = sqrt(pow(particles_x[i] - x_.p(0), 2) + pow(particles_y[j] - x_.p(1), 2) +
-                                      pow(particles_z[k] - x_.p(2), 2));
-                            if (d_ < dqc_) {
-                                dqc_ = d_;
-                                eobs_(0) = x_.p(0) - particles_x[i];
-                                eobs_(1) = x_.p(1) - particles_y[i];
-                                eobs_(2) = x_.p(2) - particles_z[i];
-                                eobs_(3) = 0;
-                                eobs_(4) = 0;
-                                eobs_(5) = 0;
-                            }
-                        }
-                    }
+                   for (int j=0; j<50; j++) {
+                       for (int k=0; k < 50; k++) {
+                           double d_;
+                           d_ = sqrt(pow(particles_x[i] - x_.p(0), 2) + pow(particles_y[j] - x_.p(1), 2) +
+                                     pow(particles_z[k] - x_.p(2), 2));
+                           if (d_ < dqc_) {
+                               dqc_ = d_;
+                               eobs_(0) = x_.p(0) - particles_x[i];
+                               eobs_(1) = x_.p(1) - particles_y[i];
+                               eobs_(2) = x_.p(2) - particles_z[i];
+                               eobs_(3) = 0;
+                               eobs_(4) = 0;
+                               eobs_(5) = 0;
+                           }
+                       }
+                   }
                 }
                 if(dqc_ <= Q_Star) {
-                    eobs_ = eobs_*(1/dqc_);
-                    f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
-                    q_rep_.data = J_inv_ * f_rep_.data;
-                    qC_dot_.data = qC_dot_.data + q_rep_.data;
+                   eobs_ = eobs_*(1/dqc_);
+                   f_rep_.data =  (Rep_Gradient*((1/dqc_)-(1/Q_Star))*(1/(pow(dqc_,2))))* eobs_;
+                   q_temp_.data = J_inv_ * f_rep_.data;
+                   for (int i=0; i<n_joints_temp_; i++){
+                       qC_dot_.data[i] = qC_dot_.data[i] + q_temp_.data[i];
+                   }
+                   //qC_dot_.data = qC_dot_.data + q_rep_.data;
                 }
 
             }
 
 
-            // *** 2.2 Compute model(M,C,G) ***
-            id_solver_->JntToMass(q_, M_);
-            id_solver_->JntToCoriolis(q_, qdot_, C_);
-            id_solver_->JntToGravity(q_, G_);
+           // *** 2.2 Compute model(M,C,G) ***
+           id_solver_->JntToMass(q_, M_);
+           id_solver_->JntToCoriolis(q_, qdot_, C_);
+           id_solver_->JntToGravity(q_, G_);
 
-            // *** 2.3 Apply Torque Command to Actuator ***
-            // ISHIRA: Stabilizing Linear Control
-            eC_dot_.data = qC_dot_.data - qdot_.data;
-            aux_d_.data = M_.data * (Kd_.data.cwiseProduct(eC_dot_.data)) ;
-            comp_d_.data = C_.data.cwiseProduct(qdot_.data) + G_.data;
-            tau_d_.data = aux_d_.data + comp_d_.data;
+           // *** 2.3 Apply Torque Command to Actuator ***
+           // ISHIRA: Stabilizing Linear Control
+           eC_dot_.data = qC_dot_.data - qdot_.data;
+           aux_d_.data = M_.data * (Kd_.data.cwiseProduct(eC_dot_.data)) ;
+           comp_d_.data = C_.data.cwiseProduct(qdot_.data) + G_.data;
+           tau_d_.data = aux_d_.data + comp_d_.data;
 
-            // ISHIRA: Manipulation
-            for (int i = 0; i < n_joints_; i++)
-            {
-                joints_[i].setCommand(tau_d_(i));
-                // joints_[i].setCommand(0.0);
-            }
+           // ISHIRA: Manipulation
+           for (int i = 0; i < n_joints_; i++)
+           {
+               joints_[i].setCommand(tau_d_(i));
+               // joints_[i].setCommand(0.0);
+           }
 
-            // ********* 3. data 저장 *********
-            // save_data();
+           // ********* 3. data 저장 *********
+           // save_data();
 
-            // ********* 4. state 출력 *********
-            print_state();
+           // ********* 4. state 출력 *********
+           print_state();
         }
 
         void stopping(const ros::Time &time)
@@ -608,6 +662,7 @@ namespace arm_controllers
         //Joint handles
         unsigned int n_joints_;                               // joint 숫자
         std::vector<std::string> joint_names_;
+        std::vector<std::string> link_names_;
         std::vector<std::string> state_names_;
         std::vector<hardware_interface::JointHandle> joints_; // ??
         std::vector<urdf::JointConstSharedPtr> joint_urdfs_;  // ??
@@ -615,6 +670,7 @@ namespace arm_controllers
         // kdl
         KDL::Tree kdl_tree_;   // tree?
         KDL::Chain kdl_chain_; // chain?
+        KDL::Chain kdl_chain_temp_; // chain?
 
         // kdl M,C,G
         KDL::JntSpaceInertiaMatrix M_; // intertia matrix
@@ -625,20 +681,21 @@ namespace arm_controllers
 
         // kdl solver
         boost::scoped_ptr<KDL::ChainDynParam> id_solver_;                  // Solver To compute the inverse dynamics
-        boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_;
-        boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_; //Solver to compute the jacobian
+        boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_, fk_pos_solver_temp_;
+        boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_, jnt_to_jac_solver_temp_; //Solver to compute the jacobian
         boost::scoped_ptr<KDL::ChainIkSolverPos_LMA> ik_solver_; //Solver to compute inverse kinematics
 
         // Joint Space State
         // KDL::JntArray qd_, qd_dot_, x_cmd_, xd_dot_, x_obs_;
         // KDL::JntArray qd_old_;
-        KDL::JntArray q_, qdot_, qC_dot_, eC_dot_, x_cmd_, x_obs_;
+        KDL::JntArray q_, qdot_, qC_dot_, eC_dot_, x_cmd_, x_obs_, q_temp_;
         // KDL::JntArray e_, e_dot_, e_int_;
 
         // Task Space State
         // ver. 01
         // KDL::Frame xd_; // x.p: frame position(3x1), x.m: frame orientation (3x3)
         KDL::Frame xd_, x_, xobs_dist_;
+        std::vector<KDL::Frame> x_vec_;
         KDL::Twist ex_temp_;
         KDL::Twist ex_temp_obs_;
 
@@ -662,7 +719,7 @@ namespace arm_controllers
         std::vector<control_toolbox::Pid> pids_;
 
         // kdl and Eigen Jacobian
-        KDL::Jacobian J_;
+        KDL::Jacobian J_, J_temp_;
         Eigen::MatrixXd J_inv_;
 
         // save the data

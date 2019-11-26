@@ -12,6 +12,13 @@ elfin:
         - elfin_joint4
         - elfin_joint5
         - elfin_joint6
+      links:
+        - elfin_link1
+        - elfin_link2
+        - elfin_link3
+        - elfin_link4
+        - elfin_link5
+        - elfin_link6
       gains:
         x:
           pid: {p: 100.0, i: 0, d: 20.0}
