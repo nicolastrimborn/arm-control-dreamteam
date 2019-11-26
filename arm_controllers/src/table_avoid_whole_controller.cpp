@@ -33,9 +33,8 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
-#define Q_Star 0.01
-#define Rep_Gradient 40
-
+#define Q_Star 0.05
+#define Rep_Gradient 160
 
 namespace arm_controllers
 {
@@ -365,7 +364,7 @@ namespace arm_controllers
 
 
             printf("Tiger");
-            for (int n=1; n<n_joints_; n++) {
+            for (int n=1; n<n_joints_+1; n++) {
                 Eigen::MatrixXd J_inv_temp;
                 std::string root_name, tip_name;
                 root_name = "world";
@@ -386,11 +385,6 @@ namespace arm_controllers
                         ROS_ERROR_STREAM("    " << (*it).first);
 
                 }
-                else
-                {
-                    ROS_INFO("Got kdl chain");
-                    ROS_INFO_STREAM(link_names_[n]);
-                }
                 int n_joints_temp_ = kdl_chain_temp_.getNrOfJoints();
                 q_temp_.data = Eigen::VectorXd::Zero(n_joints_temp_);
                 for (int i = 0; i < n_joints_temp_; i++) {
@@ -404,7 +398,6 @@ namespace arm_controllers
                 jnt_to_jac_solver_temp_->JntToJac(q_temp_, J_temp_);
                 printf("%i", n);
                 pseudo_inverse(J_temp_.data, J_inv_temp);
-                ROS_INFO_STREAM(J_inv_);
                 dqc_ = 100;
                 for (int i=0; i<50; i++){
                    for (int j=0; j<50; j++) {

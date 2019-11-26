@@ -19,6 +19,7 @@ elfin:
         - elfin_link4
         - elfin_link5
         - elfin_link6
+        - elfin_end_link
       gains:
         x:
           pid: {p: 100.0, i: 0, d: 20.0}
