@@ -20,6 +20,7 @@
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
+#include "arm_controllers/ControllerJointState.h"
 
 #define PI 3.141592
 #define D2R PI / 180.0
@@ -31,9 +32,10 @@ namespace arm_controllers
 {
 class ObsAvoid_Controller : public controller_interface::Controller<hardware_interface::EffortJointInterface>
 {
-  public:
+public:
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n)
     {
+        loop_count_= 0;
         // ********* 1. Get joint name / gain from the parameter server *********
         // 1.1 Joint Name
         if (!n.getParam("joints", joint_names_))
@@ -56,14 +58,6 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
                 ROS_INFO("%s", joint_names_[i].c_str());
             }
         }
-
-        // 1.2 Gain
-        // 1.2.1 Joint Controller
-        Kp_.resize(n_joints_);
-        Kd_.resize(n_joints_);
-        Ki_.resize(n_joints_);
-        K_att_.resize(n_joints_);
-        K_rep_.resize(n_joints_);
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -138,16 +132,18 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
                 ROS_ERROR_STREAM("    " << (*it).first);
 
             return false;
-        }
-        else
-        {
+        } else {
             ROS_INFO("Got kdl chain");
         }
 
-        // PIDS////////////////////////////////////////////////////////////////
-
-        // pids
+        //*** Gains
+        Kp_.resize(n_joints_);
+        Kd_.resize(n_joints_);
+        Ki_.resize(n_joints_);
+        K_att_.resize(n_joints_);
+        K_rep_.resize(n_joints_);
         pids_.resize(n_joints_);
+
         for (size_t i=0; i<n_joints_; i++)
         {
             // Load PID Controller using gains set on parameter server
@@ -158,29 +154,34 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
             }
         }
 
-        /////////////////////////////////////////////////////////////////////////
+        // Set Joint Limits
+        // for (size_t i=0; i<n_joints_; i++)
+        // {
+        //     min_limit_.data(i) = PI/2;
+        //     min_limit_.data(i) = -PI/2;
+        // }
 
         // 4.3 inverse dynamics solver 초기화
         gravity_ = KDL::Vector::Zero(); // ?
         gravity_(2) = -9.81;            // 0: x-axis 1: y-axis 2: z-axis
 
         id_solver_.reset(new KDL::ChainDynParam(kdl_chain_, gravity_));
-
         ik_solver_.reset(new KDL::ChainIkSolverPos_LMA(kdl_chain_));
         // 4.4 jacobian solver 초기화
         jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
-
-        // ********* 5. 각종 변수 초기화 *********
-
-        // 5.1 Vector 초기화 (사이즈 정의 및 값 0)
+        // Variable initialisations
         tau_d_.data = Eigen::VectorXd::Zero(n_joints_);
-
         f_att_.data = Eigen::VectorXd::Zero(n_joints_);
         f_rep_.data = Eigen::VectorXd::Zero(n_joints_);
         d_q_.data = Eigen::VectorXd::Zero(n_joints_);
-        q_star_.data = 360*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
-        max_limit_.data = 180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
-        min_limit_.data = -180*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
+
+        // Potential Field variables
+        q_star_.data = 5*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
+
+        //**Joint Limits **************************************************************
+        max_limit_.data = 90*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
+        min_limit_.data = -90*KDL::deg2rad*Eigen::VectorXd::Ones(n_joints_);
+                
         K_att_.data = Eigen::VectorXd::Ones(n_joints_);
         K_rep_.data = Eigen::VectorXd::Ones(n_joints_);
 
@@ -193,7 +194,6 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
 
         q_.data = Eigen::VectorXd::Zero(n_joints_);
         qdot_.data = Eigen::VectorXd::Zero(n_joints_);
-
         e_.data = Eigen::VectorXd::Zero(n_joints_);
         e_dot_.data = Eigen::VectorXd::Zero(n_joints_);
         e_int_.data = Eigen::VectorXd::Zero(n_joints_);
@@ -204,18 +204,28 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
 
-        // ********* 6. ROS 명령어 *********
-        // 6.1 publisher
+        //* Publishers and message initialisation *****************************************/
         pub_qd_ = n.advertise<std_msgs::Float64MultiArray>("qd", 1000);
         pub_q_ = n.advertise<std_msgs::Float64MultiArray>("q", 1000);
         pub_e_ = n.advertise<std_msgs::Float64MultiArray>("e", 1000);
 
-        pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
+        controller_state_pub_.reset(
+            new realtime_tools::RealtimePublisher
+                <arm_controllers::ControllerJointState>(n, "state", 1));
 
-        x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
-        x_cmd_(0) = 0.0;
-        x_cmd_(1) = -0.32;
-        x_cmd_(2) = 0.56;
+        // Initialise publish message for controller_state_pub_,  allocate memory for each joint
+        for (size_t i=0; i<n_joints_; i++)
+        {
+            controller_state_pub_->msg_.state.push_back(0.0);
+            controller_state_pub_->msg_.state_dot.push_back(0.0);
+            controller_state_pub_->msg_.error.push_back(0.0);
+            controller_state_pub_->msg_.command.push_back(0.0); 
+            controller_state_pub_->msg_.command_dot.push_back(0.0); 
+            controller_state_pub_->msg_.effort_feedback.push_back(0.0); //Joint Limits Positive
+            controller_state_pub_->msg_.effort_feedforward.push_back(0.0); //Joint Limits Positive
+        }
+
+        pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
         // 6.2 subsriber
         sub = n.subscribe("command", 1000, &ObsAvoid_Controller::commandCB, this);
@@ -233,7 +243,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         {
             for (size_t i = 0; i < n_joints_; i++)
             {
-                x_cmd_(i) = msg->data[i];
+                qd_(i) = msg->data[i]*KDL::deg2rad;
             }
         }
     }
@@ -241,7 +251,7 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     void starting(const ros::Time &time)
     {
         t = 0.0;
-        ROS_INFO("Starting Computed Torque Controller");
+        ROS_INFO("Starting Joint limit controller");
     }
 
     void update(const ros::Time &time, const ros::Duration &period)
@@ -256,77 +266,94 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         {
             q_(i) = joints_[i].getPosition();
             qdot_(i) = joints_[i].getVelocity();
-        }
-        
-
-        // ********* 1. Desired Trajecoty in Joint Space *********
-
-        // *** 1.1 Desired Trajectory in taskspace ***
-        xd_.p(0) = x_cmd_(0);
-        xd_.p(1) = x_cmd_(1);
-        xd_.p(2) = x_cmd_(2);
-        xd_.M = KDL::Rotation(KDL::Rotation::RPY(x_cmd_(3), x_cmd_(4), x_cmd_(5)));
-
-        jnt_to_jac_solver_->JntToJac(q_, J_);
-        // *** 1.2 computing inverse kinematics***
-        ik_solver_->CartToJnt(q_, xd_, qd_);
-
-        // ********* 2. Motion Controller in Joint Space*********
-        // *** 2.0 Potential ***
-        // Attractive potential where f_att_ is a velocity
-        f_att_.data = - K_att_.data.cwiseProduct(q_.data-qd_.data);
-
-        // Repulsive potential where f_rep_ is a velocity
-        for (int i =0; i<n_joints_; i++){
-            d_q_.data(i) = fmin(abs(max_limit_.data(i)-q_.data(i)), abs(min_limit_.data(i)-q_.data(i)));
-            if (d_q_.data(i)<=q_star_.data(i)) {
-                f_rep_.data(i) =
-                        K_rep_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2));
-            } else{
-                f_rep_.data(i) = 0;
-            }
+            // qddot_(i) = joints_[i].getEffort();
         }
 
-        qd_dot_.data = f_att_.data + f_rep_.data;
-
-        // *** 2.1 Error Definition in Joint Space ***
-        e_.data = qd_.data - q_.data;
-        e_dot_.data = qd_dot_.data - qdot_.data;
-        e_int_.data = qd_.data - q_.data; // (To do: e_int 업데이트 필요요)
-
-        // *** 2.2 Compute model(M,C,G) ***
-        id_solver_->JntToMass(q_, M_);
-        id_solver_->JntToCoriolis(q_, qdot_, C_);
-        id_solver_->JntToGravity(q_, G_);
-
-        // *** 2.3 Apply Torque Command to Actuator ***
+        // ** Get Gains from parameter server
         for (int i = 0; i < n_joints_; i++)
         {
             Kp_(i) = pids_[i].getGains().p_gain_;
             Kd_(i) = pids_[i].getGains().d_gain_;
             Ki_(i) = pids_[i].getGains().i_gain_;
         }
+        
+        // ********* Motion Controller in Joint Space*********
+        
+        // *** 2.2 Compute model(M,C,G) ***
+        id_solver_->JntToMass(q_, M_);
+        id_solver_->JntToCoriolis(q_, qdot_, C_);
+        id_solver_->JntToGravity(q_, G_); 
 
-        // ISHIRA: Stabilizing Linear Control
-        aux_d_.data = M_.data * (qd_ddot_.data + Kp_.data.cwiseProduct(e_.data) + Kd_.data.cwiseProduct(e_dot_.data));
-        // ISHIRA: n(q, qdot)
-        comp_d_.data = C_.data + G_.data;
-        // ISHIRA: Nonlinear Compensation and Decoupling
-        tau_d_.data = aux_d_.data + comp_d_.data;
+        // *** 2.0 Potential ***
+        // Attractive potential where f_att_ is a velocity
+        f_att_.data = -1 * K_att_.data.cwiseProduct(q_.data - qd_.data);
+        // Repulsive potential where f_rep_ is a velocity
+        double gradient;
+        for (int i =0; i<n_joints_; i++){
+            if(std::isless(fabs(max_limit_.data(i)-q_.data(i)), fabs(min_limit_.data(i)-q_.data(i)))) {
+                d_q_.data(i) = fabs(max_limit_.data(i)-q_.data(i));
+                gradient = -1;
+            } else {
+                d_q_.data(i) = fabs(min_limit_.data(i) - q_.data(i));
+                gradient = 1;
+            }
+            // d_q_.data(i) = fmin(abs(max_limit_.data(i)-q_.data(i)), abs(min_limit_.data(i)-q_.data(i)));
+            if (d_q_.data(i) <= q_star_.data(i)) {
+                f_rep_.data(i) =
+                        K_rep_.data(i) * ((1 / d_q_.data(i)) - (1 / q_star_.data(i))) * (1 / pow(d_q_.data(i), 2)) * gradient;
+            } else{
+                f_rep_.data(i) = 0;
+            }
+        }      
+
+        // ROS_INFO_STREAM(d_q_.data);
+        qd_dot_.data = f_att_.data + f_rep_.data;
+        e_.data = qd_.data - q_.data;
+        e_dot_.data = qd_dot_.data - qdot_.data;
+        e_int_.data = qd_.data - q_.data; 
 
 
-        // ISHIRA: Manipulation
+        aux_d_.data = Kd_.data.cwiseProduct(e_dot_.data)+ Kp_.data.cwiseProduct(e_.data);
+        tau_d_.data = G_.data + C_.data + aux_d_.data;
+        // tau_d_= G_.data + Kp_.data.cwiseProduct(e_.data) - Kd_.data.cwiseProduct(qdot_.data);
+
         for (int i = 0; i < n_joints_; i++)
         {
             joints_[i].setCommand(tau_d_(i));
-            // joints_[i].setCommand(0.0);
         }
 
         // ********* 3. data 저장 *********
-        save_data();
-
+        //save_data();
         // ********* 4. state 출력 *********
-        print_state();
+        //print_state();
+        publish_msgs(time);
+    }
+
+    void publish_msgs(const ros::Time &time){
+
+        // publishes at 100hz
+        if (loop_count_ % 10 == 0)
+        {
+            // Publishes Controller State
+            if (controller_state_pub_->trylock())
+            {   
+                // ROS_INFO("Publishing Controller State");
+                controller_state_pub_->msg_.header.stamp = time;
+                for(int i=0; i<n_joints_; i++)
+                {
+                    /* Joint Space*/
+                    controller_state_pub_->msg_.state[i] = R2D*q_(i);
+                    controller_state_pub_->msg_.state_dot[i] = qdot_(i);
+                    controller_state_pub_->msg_.error[i] = abs(R2D*e_(i));
+                    controller_state_pub_->msg_.effort_feedback[i] = R2D*max_limit_.data(i);
+                    controller_state_pub_->msg_.effort_feedforward[i] = R2D*min_limit_.data(i);
+                    controller_state_pub_->msg_.command[i] = qd_(i);
+                }
+                controller_state_pub_->unlockAndPublish();
+            }
+        }
+        // Loop Counter Variable
+        loop_count_++;
     }
 
     void stopping(const ros::Time &time)
@@ -475,9 +502,10 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
         count++;
     }
 
-  private:
+private:
     // others
     double t;
+    int loop_count_;
 
     //Joint handles
     unsigned int n_joints_;                               // joint 숫자
@@ -540,6 +568,11 @@ class ObsAvoid_Controller : public controller_interface::Controller<hardware_int
     // ros publisher
     ros::Publisher pub_qd_, pub_q_, pub_e_;
     ros::Publisher pub_SaveData_;
+
+    // Realtime safe publisher controller state
+    boost::scoped_ptr<
+			realtime_tools::RealtimePublisher<
+				arm_controllers::ControllerJointState> > controller_state_pub_;
 
     // ros subscriber
     ros::Subscriber sub;
