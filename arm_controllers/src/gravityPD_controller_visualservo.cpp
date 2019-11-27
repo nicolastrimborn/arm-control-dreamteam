@@ -391,14 +391,13 @@ class GravityPD_Controller_VisualServo : public controller_interface::Controller
                 // Task Space x,y,z (in mm) roll, pitch, yaw (in deg)
                 //Position
                 for(int i=0; i<3; i++) {
-                    controller_state_pub_->msg_.error_taskspace[i] = ex_(i) * 1000;
+                    controller_state_pub_->msg_.error_taskspace[i] = abs(ex_(i) * 1000);
                     controller_state_pub_->msg_.desired_pose[i] = xd_.p(i);
                     controller_state_pub_->msg_.actual_pose[i] = x_.p(i);   
-                    
                 }   
                 //Orientation
                 for(int i=3; i<6; i++) {
-                    controller_state_pub_->msg_.error_taskspace[i] = R2D * ex_(i);
+                    controller_state_pub_->msg_.error_taskspace[i] = abs(R2D * ex_(i));
                 }
                 double a_roll, a_pitch, a_yaw, d_roll, d_pitch, d_yaw;
                 xd_.M.GetEulerZYX(d_yaw, d_pitch, d_roll);

@@ -20,11 +20,11 @@ elfin:
         z:
           pid: {p: 4000.0, i: 0, d: 40.0, i_clamp: 50, antiwindup: true}
         roll:
-          pid: {p: 450.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
+          pid: {p: 1000.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
         pitch:
-          pid: {p: 450.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
+          pid: {p: 1000.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
         yaw:
-          pid: {p: 450.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
+          pid: {p: 1000.0, i: 0, d: 20.0, i_clamp: 50, antiwindup: true}
       root_link: world
       tip_link: camera_link_optical
 
