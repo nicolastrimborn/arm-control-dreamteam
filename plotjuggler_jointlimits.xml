@@ -1,0 +1,142 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root version="2.3.8">
+ <tabbed_widget parent="main_window" name="Main Window">
+  <plotmatrix tab_name="Joint Positions" rows="3" columns="2">
+   <plot row="0" col="0">
+    <range right="57.440000" left="37.440000" top="189.000039" bottom="-189.000039"/>
+    <limitY/>
+    <curve R="214" custom_transform="noTransform" G="39" B="40" name="/elfin/obsavoid_controller/state/command_dot.0"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedback.0"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedforward.0"/>
+    <curve R="26" custom_transform="noTransform" G="201" B="56" name="/elfin/obsavoid_controller/state/state.0"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="0">
+    <range right="57.440000" left="37.440000" top="189.000039" bottom="-189.000039"/>
+    <limitY/>
+    <curve R="241" custom_transform="noTransform" G="76" B="193" name="/elfin/obsavoid_controller/state/command_dot.2"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedback.2"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedforward.2"/>
+    <curve R="148" custom_transform="noTransform" G="103" B="189" name="/elfin/obsavoid_controller/state/state.2"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="0">
+    <range right="57.440000" left="37.440000" top="189.000039" bottom="-189.000039"/>
+    <limitY/>
+    <curve R="188" custom_transform="noTransform" G="189" B="34" name="/elfin/obsavoid_controller/state/command_dot.4"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedback.4"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedforward.4"/>
+    <curve R="31" custom_transform="noTransform" G="119" B="180" name="/elfin/obsavoid_controller/state/state.4"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="0" col="1">
+    <range right="57.440000" left="37.440000" top="189.000039" bottom="-189.000039"/>
+    <limitY/>
+    <curve R="26" custom_transform="noTransform" G="201" B="56" name="/elfin/obsavoid_controller/state/command_dot.1"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedback.1"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedforward.1"/>
+    <curve R="255" custom_transform="noTransform" G="127" B="14" name="/elfin/obsavoid_controller/state/state.1"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="1">
+    <range right="57.440000" left="37.440000" top="189.000039" bottom="-189.000039"/>
+    <limitY/>
+    <curve R="188" custom_transform="noTransform" G="189" B="34" name="/elfin/obsavoid_controller/state/command_dot.3"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedback.3"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedforward.3"/>
+    <curve R="31" custom_transform="noTransform" G="119" B="180" name="/elfin/obsavoid_controller/state/state.4"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="1">
+    <range right="57.440000" left="37.440000" top="189.000039" bottom="-189.000039"/>
+    <limitY/>
+    <curve R="188" custom_transform="noTransform" G="189" B="34" name="/elfin/obsavoid_controller/state/command_dot.5"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedback.5"/>
+    <curve R="0" custom_transform="noTransform" G="0" B="0" name="/elfin/obsavoid_controller/state/effort_feedforward.5"/>
+    <curve R="31" custom_transform="noTransform" G="119" B="180" name="/elfin/obsavoid_controller/state/state.5"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <plotmatrix tab_name="Error" rows="1" columns="1">
+   <plot row="0" col="0">
+    <range right="64.610000" left="44.610000" top="2.050000" bottom="-0.050000"/>
+    <limitY/>
+    <curve R="255" custom_transform="noTransform" G="127" B="14" name="/elfin/obsavoid_controller/state/error.0"/>
+    <curve R="241" custom_transform="noTransform" G="76" B="193" name="/elfin/obsavoid_controller/state/error.1"/>
+    <curve R="148" custom_transform="noTransform" G="103" B="189" name="/elfin/obsavoid_controller/state/error.2"/>
+    <curve R="23" custom_transform="noTransform" G="190" B="207" name="/elfin/obsavoid_controller/state/error.3"/>
+    <curve R="188" custom_transform="noTransform" G="189" B="34" name="/elfin/obsavoid_controller/state/error.4"/>
+    <curve R="31" custom_transform="noTransform" G="119" B="180" name="/elfin/obsavoid_controller/state/error.5"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <currentPlotMatrix index="1"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="1"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <!-- - - - - - - - - - - - - - - -->
+ <Plugins>
+  <plugin ID="DataLoad CSV">
+   <default time_axis=""/>
+  </plugin>
+  <plugin ID="DataLoad ROS bags">
+   <use_header_stamp value="false"/>
+   <use_renaming_rules value="true"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+  </plugin>
+  <plugin ID="DataLoad ULog"/>
+  <plugin ID="ROS Topic Subscriber">
+   <use_header_stamp value="false"/>
+   <use_renaming_rules value="true"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+  </plugin>
+  <plugin ID="ROS /rosout Visualization" status="idle"/>
+  <plugin ID="ROS Topic Re-Publisher" status="idle"/>
+ </Plugins>
+ <!-- - - - - - - - - - - - - - - -->
+ <previouslyLoaded_Datafiles/>
+ <previouslyLoaded_Streamer name="ROS Topic Subscriber"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <customMathEquations/>
+ <snippets>
+  <snippet name="1st_derivative">
+   <global>var prevX = 0
+var prevY = 0</global>
+   <equation>dx = time - prevX
+dy = value - prevY
+prevX = time
+prevY = value
+
+return dy/dx</equation>
+  </snippet>
+  <snippet name="1st_order_lowpass">
+   <global>var prevY = 0
+var alpha = 0.1</global>
+   <equation>prevY = alpha * value + (1.-alpha) * prevY
+
+return prevY</equation>
+  </snippet>
+  <snippet name="sum_A_B">
+   <global></global>
+   <equation>return $$PLOT_A$$ + $$PLOT_B$$</equation>
+  </snippet>
+  <snippet name="yaw_from_quaternion">
+   <global>// source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+function quaternionToYaw(x, y, z, w)
+{
+  // yaw (z-axis rotation)
+  t1 = 2.0 * (w * z + x * y);
+  t2 = 1.0 - 2.0 * (y * y + z * z);
+  yaw = Math.atan2(t1, t2);
+
+  return yaw
+}</global>
+   <equation>return quaternionToYaw(x, y, z, w);</equation>
+  </snippet>
+ </snippets>
+ <!-- - - - - - - - - - - - - - - -->
+</root>
+
