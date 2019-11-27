@@ -42,6 +42,9 @@
 #define num_taskspace 6
 #define vs_numpoints 3
 #define Z 1
+#define f 476
+#define p_u 400
+#define p_v 400
 
 
 //DONE : Publish data for plotting
@@ -197,6 +200,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         J_.resize(kdl_chain_.getNrOfJoints());
         //Image Jacobian
         J_L_.resize(6);
+        J_p_.resize(6);
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
@@ -228,6 +232,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         visual_servo_pub_.reset(
         new realtime_tools::RealtimePublisher
             <arm_controllers::VisualServoMsg>(n, "visual_state", 1));
+            
 
         // Initialise publish message for controller_state_pub_,  allocate memory for each joint
         for (size_t i=0; i<n_joints_; i++)
@@ -275,19 +280,35 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             s_(5) = msg.fiducials.at(0).y2;
             
             // Image Jacobian (intereraction matrix)
+            // (6x6) matrix
             for (std::size_t i = 0; i < 6; i=i+2) {
-                J_L_(i,0) = -1/Z;
-                J_L_(i,1) = 0;
-                J_L_(i,2) = s_(i)/Z;
-                J_L_(i,3) = s_(i) * s_(i+1);
-                J_L_(i,4) = -(1+pow(s_(i), 2));
-                J_L_(i,5) = s_(i+1);
-                J_L_(i+1,0) = 0;
-                J_L_(i+1,1) = -1/Z;
-                J_L_(i+1,2) = s_(i+1)/Z;
+                //populate two rows at a time
+                //(i,0)
+                J_L_(i,0) = -1/Z; J_p_(i,0) = -f/(p_u * Z);
+                //(i,1)
+                J_L_(i,1) = 0; J_p_(i,1) = 0;
+                //(i,2)
+                J_L_(i,2) = s_(i)/Z; J_p_(i,2) = s_(i)/Z;
+                //(i,3))
+                J_L_(i,3) = s_(i) * s_(i+1); J_p_(i,3) = (p_u* s_(i) * s_(i+1))/f;
+                //(i,4)
+                J_L_(i,4) = -(1+pow(s_(i), 2)); 
+                J_p_(i,4) = -1 * ((pow(f,2) + (pow(p_u,2) * pow(s_(i), 2)))/(p_u)*f);
+                //(i,5)
+                J_L_(i,5) = s_(i+1); J_p_(i,5) = s_(i+1);
+                //(i+1,0)
+                J_L_(i+1,0) = 0; J_p_(i+1,0) = 0;
+                //(i+1,1)
+                J_L_(i+1,1) = -1/Z; J_p_(i+1,1) = -f/(p_v * Z);
+                //(i+1,2)
+                J_L_(i+1,2) = s_(i+1)/Z; J_p_(i+1,2) =  J_L_(i+1,2);
+                //(i+1,3)
                 J_L_(i+1,3) = (1+pow(s_(i+1), 2));
-                J_L_(i+1,4) = -(s_(i) * s_(i+1));
-                J_L_(i+1,5) = -s_(i);
+                J_p_(i+1,3) = -1 * ((pow(f,2) + (pow(p_v,2) * pow(s_(i), 2)))/(p_v)*f);
+                //(i+1,4)
+                J_L_(i+1,4) = -(s_(i) * s_(i+1)); J_p_(i+1,4) = (p_v* s_(i) * s_(i+1))/f;
+                //(i+1,5)
+                J_L_(i+1,5) = -s_(i); J_p_(i+1,5) = -s_(i); 
             }
         }
     }
@@ -461,6 +482,7 @@ private:
 
     // kdl and Eigen Jacobian
     KDL::Jacobian J_L_;
+    KDL::Jacobian J_p_;
     KDL::Jacobian J_;
     Eigen::Matrix<double, num_taskspace, num_taskspace> J_transpose_;
 
@@ -507,10 +529,11 @@ private:
 			realtime_tools::RealtimePublisher<
 				arm_controllers::ControllerJointState> > controller_state_pub_;
 
-    // Realtime safe publisher IBVS points
+    // Realtime safe publisher IBVS points message
     boost::scoped_ptr<
         realtime_tools::RealtimePublisher<
             arm_controllers::VisualServoMsg> > visual_servo_pub_;
+
     
     // ros subsciber
     ros::Subscriber cntlr_sub;
