@@ -41,7 +41,7 @@
 #define SaveDataMax 49
 #define num_taskspace 6
 #define vs_numpoints 3
-#define Z 1
+#define Z 10
 #define f 476
 #define p_u 400
 #define p_v 400
@@ -90,6 +90,8 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         Kp_.resize(n_joints_);
         Kd_.resize(n_joints_);
         Ki_.resize(n_joints_);
+        Kp_ib.resize(6);
+        Kd_ib.resize(6);
 
         // 2. ********* urdf *********
         urdf::Model urdf;
@@ -240,6 +242,9 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         {
             controller_state_pub_->msg_.state.push_back(0.0);
             controller_state_pub_->msg_.state_dot.push_back(0.0);
+            controller_state_pub_->msg_.error.push_back(0.0);
+            controller_state_pub_->msg_.command.push_back(0.0);//Kp
+            controller_state_pub_->msg_.command_dot.push_back(0.0);//Kd
         }
 
 
@@ -250,6 +255,11 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         sd_(3) = 315; //y2
         sd_(4) = 486; //x3
         sd_(5) = 306; //y3
+
+        for(int i= 0; i<6; i++){
+            Kd_ib(i) = 20;
+            Kp_ib(i) = 1000;
+        }
 
         return true;
     }
@@ -386,22 +396,23 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
 
         // Operate as IBVS Controller               
         } else {
+            
             jnt_to_jac_solver_->JntToJac(q_, J_);
-            J_L_.data.noalias() = L_s_.data * J_.data;
+            J_L_.data = L_s_.data * J_.data;
             J_transpose_ = J_L_.data.transpose();
             xdot_ = J_L_.data * qdot_.data;
             // ********* 2. Motion Controller in Joint Space*********
             // Error Definition in Image Space            
-            es_temp_ = sd_ - s_;
+            es_ = sd_ - s_;
             // convert to matrix
-            es_(0) = es_temp_(0);   
-            es_(1) = es_temp_(1);
-            es_(2) = es_temp_(2);
-            es_(3) = es_temp_(3);
-            es_(4) = es_temp_(4);
-            es_(5) = es_temp_(5);
+            // es_(0) = es_temp_(0);   
+            // es_(1) = es_temp_(1);
+            // es_(2) = es_temp_(2);
+            // es_(3) = es_temp_(3);
+            // es_(4) = es_temp_(4);
+            // es_(5) = es_temp_(5);
 
-            aux_d_.data = J_transpose_*(Kp_.data.cwiseProduct(es_)-Kd_.data.cwiseProduct(xdot_));
+            aux_d_.data = J_transpose_*(Kp_ib.data.cwiseProduct(es_)-Kd_ib.data.cwiseProduct(xdot_));
             tau_d_.data = aux_d_.data + G_.data;            
         } 
 
@@ -428,6 +439,9 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
                     /* Joint Space*/
                     controller_state_pub_->msg_.state[i] = R2D*q_(i);
                     controller_state_pub_->msg_.state_dot[i] = R2D*qdot_(i);
+                    controller_state_pub_->msg_.error[i] = es_(i);
+                    controller_state_pub_->msg_.command[i]= Kp_ib(i);
+                    controller_state_pub_->msg_.command_dot[i] = Kd_ib(i);
                 }
                 controller_state_pub_->unlockAndPublish();
             }
@@ -525,6 +539,7 @@ private:
 
     // gains
     KDL::JntArray Kp_, Ki_, Kd_;
+    KDL::JntArray Kp_ib, Kd_ib;
     std::vector<control_toolbox::Pid> pids_;       /**< Internal PID controllers. */
 
     // ros publisher
