@@ -26,8 +26,8 @@
 #define R2D 180.0 / PI
 #define SaveDataMax 49
 #define num_taskspace 6
-#define Q_Star 0.1
-#define Rep_Gradient 5
+#define Q_Star 0.05
+#define Rep_Gradient 40
 
 namespace arm_controllers
 {
@@ -221,20 +221,14 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
         // pub_SaveData_ = n.advertise<std_msgs::Float64MultiArray>("SaveData", 1000); // 뒤에 숫자는?
 
         x_cmd_.data = Eigen::VectorXd::Zero(num_taskspace);
-        x_cmd_(0) = 0.0;
+        x_cmd_(0) = 0.1;
         x_cmd_(1) = -0.32;
-        x_cmd_(2) = 0.56;
-        x_cmd_(3) = 0;
-        x_cmd_(4) = 0;
-        x_cmd_(5) = 0;
+        x_cmd_(2) = 0.7;
 
         x_obs_.data = Eigen::VectorXd::Zero(num_taskspace);
         x_obs_(0) = 10;
         x_obs_(1) = 10;
         x_obs_(2) = 10;
-        x_obs_(3) = 0;
-        x_obs_(4) = 0;
-        x_obs_(5) = 0;
 
 
         // 6.2 subsriber
@@ -558,7 +552,7 @@ class PointAvoid_Controller : public controller_interface::Controller<hardware_i
     //Joint handles
     unsigned int n_joints_;                               // joint 숫자
     std::vector<std::string> joint_names_;
-    std::vector<std::string> state_names_;                 
+    std::vector<std::string> state_names_;
     std::vector<hardware_interface::JointHandle> joints_; // ??
     std::vector<urdf::JointConstSharedPtr> joint_urdfs_;  // ??
 

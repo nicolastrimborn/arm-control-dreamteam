@@ -1,0 +1,16 @@
+<launch>
+  <arg name="perspective" default="--perspective-file $(find arm_controllers)/TableAvoidWholeController.perspective" />
+  <rosparam file="$(find elfin_control)/config/table_avoid_whole_control.yaml" command="load"/>
+
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+    output="screen" ns="/elfin" args="joint_state_controller table_avoid_whole_controller"/>
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" ns="/elfin"/>
+
+  <arg name="node_start_delay" default="2.0" />
+  <node name = "my_rqt_dashboard" pkg = "rqt_gui" type = "rqt_gui" respawn = "false" output = "screen" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@'"
+        args="$(arg perspective)" />
+
+  <arg name="rviz" default="$(find elfin_launch)/rviz_table.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(arg rviz)" /> <!--args="-d $(arg rviz)"-->
+</launch>

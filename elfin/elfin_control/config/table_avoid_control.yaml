@@ -3,8 +3,8 @@ elfin:
       type: joint_state_controller/JointStateController
       publish_rate: 1000
 
-    pointavoid_controller:
-      type: arm_controllers/PointAvoid_Controller
+    table_avoid_controller:
+      type: arm_controllers/TableAvoid_Controller
       joints:
         - elfin_joint1
         - elfin_joint2
@@ -14,16 +14,16 @@ elfin:
         - elfin_joint6
       gains:
         x:
-          pid: {p: 200.0, i: 0, d: 20.0}
+          pid: {p: 100.0, i: 0, d: 20.0}
         y:
-          pid: {p: 200.0, i: 0, d: 20.0}
+          pid: {p: 100.0, i: 0, d: 20.0}
         z:
-          pid: {p: 200.0, i: 0, d: 20.0}
+          pid: {p: 100.0, i: 0, d: 20.0}
         roll:
-          pid: {p: 60.0, i: 0, d: 20.0}
+          pid: {p: 100.0, i: 0, d: 20.0}
         pitch:
-          pid: {p: 60.0, i: 0, d: 20.0}
+          pid: {p: 100.0, i: 0, d: 20.0}
         yaw:
-          pid: {p: 60.0, i: 0, d: 20.0}
+          pid: {p: 100.0, i: 0, d: 20.0}
       root_link: world
       tip_link: elfin_link6

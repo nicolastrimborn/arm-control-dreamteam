@@ -62,14 +62,27 @@
 
   <class name="arm_controllers/ObsAvoid_Controller" type="arm_controllers::ObsAvoid_Controller" base_class_type="controller_interface::ControllerBase">
     <description>
-      Obastacle avoidance Controller
+      Obstacle avoidance Controller
     </description>
   </class>
 
   <class name="arm_controllers/PointAvoid_Controller" type="arm_controllers::PointAvoid_Controller" base_class_type="controller_interface::ControllerBase">
     <description>
-      Point Obastacle avoidance Controller
+      Point Obstacle avoidance Controller
     </description>
   </class>
+
+  <class name="arm_controllers/TableAvoid_Controller" type="arm_controllers::TableAvoid_Controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Table Obstacle avoidance Controller
+    </description>
+  </class>
+
+  <class name="arm_controllers/TableAvoidWhole_Controller" type="arm_controllers::TableAvoidWhole_Controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      Table Obstacle avoidance Controller
+    </description>
+  </class>
+
 
 </library>
