@@ -201,6 +201,7 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
         //Image Jacobian
         J_L_.resize(6);
         J_p_.resize(6);
+        L_s_.resize(6);
         M_.resize(kdl_chain_.getNrOfJoints());
         C_.resize(kdl_chain_.getNrOfJoints());
         G_.resize(kdl_chain_.getNrOfJoints());
@@ -284,31 +285,31 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
             for (std::size_t i = 0; i < 6; i=i+2) {
                 //populate two rows at a time
                 //(i,0)
-                J_L_(i,0) = -1/Z; J_p_(i,0) = -f/(p_u * Z);
+                L_s_(i,0) = -1/Z; J_p_(i,0) = -f/(p_u * Z);
                 //(i,1)
-                J_L_(i,1) = 0; J_p_(i,1) = 0;
+                L_s_(i,1) = 0; J_p_(i,1) = 0;
                 //(i,2)
-                J_L_(i,2) = s_(i)/Z; J_p_(i,2) = s_(i)/Z;
+                L_s_(i,2) = s_(i)/Z; J_p_(i,2) = s_(i)/Z;
                 //(i,3))
-                J_L_(i,3) = s_(i) * s_(i+1); J_p_(i,3) = (p_u* s_(i) * s_(i+1))/f;
+                L_s_(i,3) = s_(i) * s_(i+1); J_p_(i,3) = (p_u* s_(i) * s_(i+1))/f;
                 //(i,4)
-                J_L_(i,4) = -(1+pow(s_(i), 2)); 
+                L_s_(i,4) = -(1+pow(s_(i), 2)); 
                 J_p_(i,4) = -1 * ((pow(f,2) + (pow(p_u,2) * pow(s_(i), 2)))/(p_u)*f);
                 //(i,5)
-                J_L_(i,5) = s_(i+1); J_p_(i,5) = s_(i+1);
+                L_s_(i,5) = s_(i+1); J_p_(i,5) = s_(i+1);
                 //(i+1,0)
-                J_L_(i+1,0) = 0; J_p_(i+1,0) = 0;
+                L_s_(i+1,0) = 0; J_p_(i+1,0) = 0;
                 //(i+1,1)
-                J_L_(i+1,1) = -1/Z; J_p_(i+1,1) = -f/(p_v * Z);
+                L_s_(i+1,1) = -1/Z; J_p_(i+1,1) = -f/(p_v * Z);
                 //(i+1,2)
-                J_L_(i+1,2) = s_(i+1)/Z; J_p_(i+1,2) =  J_L_(i+1,2);
+                L_s_(i+1,2) = s_(i+1)/Z;  J_p_(i+1,2) = s_(i+1)/Z;
                 //(i+1,3)
-                J_L_(i+1,3) = (1+pow(s_(i+1), 2));
+                L_s_(i+1,3) = (1+pow(s_(i+1), 2));
                 J_p_(i+1,3) = -1 * ((pow(f,2) + (pow(p_v,2) * pow(s_(i), 2)))/(p_v)*f);
                 //(i+1,4)
-                J_L_(i+1,4) = -(s_(i) * s_(i+1)); J_p_(i+1,4) = (p_v* s_(i) * s_(i+1))/f;
+                L_s_(i+1,4) = -(s_(i) * s_(i+1)); J_p_(i+1,4) = (p_v* s_(i) * s_(i+1))/f;
                 //(i+1,5)
-                J_L_(i+1,5) = -s_(i); J_p_(i+1,5) = -s_(i); 
+                L_s_(i+1,5) = -s_(i); J_p_(i+1,5) = -s_(i); 
             }
         }
     }
@@ -385,13 +386,15 @@ class GravityPD_Controller_VisualServo_IB : public controller_interface::Control
 
         // Operate as IBVS Controller               
         } else {
+            jnt_to_jac_solver_->JntToJac(q_, J_);
+            J_L_.data.noalias() = L_s_.data * J_.data;
             J_transpose_ = J_L_.data.transpose();
             xdot_ = J_L_.data * qdot_.data;
             // ********* 2. Motion Controller in Joint Space*********
             // Error Definition in Image Space            
             es_temp_ = sd_ - s_;
             // convert to matrix
-            es_(0) = es_temp_(0);
+            es_(0) = es_temp_(0);   
             es_(1) = es_temp_(1);
             es_(2) = es_temp_(2);
             es_(3) = es_temp_(3);
@@ -482,6 +485,7 @@ private:
 
     // kdl and Eigen Jacobian
     KDL::Jacobian J_L_;
+    KDL::Jacobian L_s_;
     KDL::Jacobian J_p_;
     KDL::Jacobian J_;
     Eigen::Matrix<double, num_taskspace, num_taskspace> J_transpose_;
