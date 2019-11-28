@@ -10,8 +10,8 @@
   <arg name="node_start_delay" default="2.0" />
   <node name = "my_rqt_dashboard" pkg = "rqt_gui" type = "rqt_gui" respawn = "false" output = "screen" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@'"
         args="$(arg perspective)" />
-
+  <!--
   <arg name="rviz" default="$(find elfin_launch)/elfin_visualservo.rviz" />   
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(arg rviz)" 
-        launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@'"/> 
+        launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@'"/> -->  
 </launch>
